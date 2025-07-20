@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState } from "react";
 import Image from "next/image";
-import { Camera, Loader2, Sparkles, Upload, FileEdit, Save, Trash2, XCircle } from "lucide-react";
+import { Camera, Loader2, Sparkles, Upload, FileEdit, Save, Trash2, XCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,11 +12,12 @@ import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 
 type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
 
 export function DocumentScanner() {
-  const { user } = useAuth();
+  const { user, isFirebaseEnabled } = useAuth();
   const [scannerState, setScannerState] = useState<ScannerState>("idle");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<GenerateSmartFilenameOutput | null>(null);
@@ -58,7 +60,7 @@ export function DocumentScanner() {
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!imagePreview || !aiResult) return;
+    if (!imagePreview || !aiResult || !isFirebaseEnabled) return;
     setScannerState("saving");
 
     const formData = new FormData(event.currentTarget);
@@ -137,6 +139,15 @@ export function DocumentScanner() {
         {scannerState === "reviewing" && imagePreview && aiResult && (
            <form onSubmit={handleSave} className="space-y-6">
                 <Image src={imagePreview} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
+                {!isFirebaseEnabled && (
+                    <Alert variant="destructive" className="mt-4">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Firebase Not Configured</AlertTitle>
+                        <AlertDescription>
+                        Cannot save document. Please configure your Firebase API keys.
+                        </AlertDescription>
+                    </Alert>
+                )}
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="filename" className="block text-sm font-medium text-muted-foreground mb-1">Filename</label>
@@ -156,7 +167,7 @@ export function DocumentScanner() {
                 </div>
                 <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={handleReset}><Trash2 className="mr-2 h-4 w-4"/> Start Over</Button>
-                    <Button type="submit"><Save className="mr-2 h-4 w-4"/> Save to Mailbox</Button>
+                    <Button type="submit" disabled={!isFirebaseEnabled}><Save className="mr-2 h-4 w-4"/> Save to Mailbox</Button>
                 </div>
             </form>
         )}

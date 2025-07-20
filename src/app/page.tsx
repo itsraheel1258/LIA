@@ -1,15 +1,18 @@
+
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { Mail, Sparkles, LogIn } from "lucide-react";
+import { Mail, Sparkles, LogIn, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Home() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, signInWithGoogle, isFirebaseEnabled } = useAuth();
   const router = useRouter();
 
   const handleSignIn = async () => {
+    if (!isFirebaseEnabled) return;
     try {
       await signInWithGoogle();
       router.push("/dashboard");
@@ -35,6 +38,15 @@ export default function Home() {
       <main className="flex-grow flex items-center">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-3xl mx-auto">
+            {!isFirebaseEnabled && (
+                <Alert variant="destructive" className="mb-8 text-left">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Firebase Not Configured</AlertTitle>
+                    <AlertDescription>
+                        Your Firebase API keys are missing. Please add them to a <code>.env.local</code> file to enable authentication and database features.
+                    </AlertDescription>
+                </Alert>
+            )}
             <div className="inline-block bg-primary/10 text-primary px-4 py-1 rounded-full text-sm font-medium font-headline mb-4">
               <Sparkles className="inline-block h-4 w-4 mr-2" />
               Now with AI-powered organization
@@ -51,7 +63,7 @@ export default function Home() {
                   Go to Your Dashboard
                 </Button>
               ) : (
-                <Button size="lg" onClick={handleSignIn} disabled={loading} className="font-headline">
+                <Button size="lg" onClick={handleSignIn} disabled={loading || !isFirebaseEnabled} className="font-headline">
                   {loading ? (
                     "Loading..."
                   ) : (

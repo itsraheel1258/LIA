@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,18 +9,22 @@ import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FolderOpen, Inbox } from "lucide-react";
+import { FolderOpen, Inbox, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { Skeleton } from "../ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 export function SmartMailbox() {
-  const { user } = useAuth();
+  const { user, isFirebaseEnabled } = useAuth();
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isFirebaseEnabled) {
+        setLoading(false);
+        return;
+    };
     
     setLoading(true);
     const q = query(
@@ -40,10 +45,28 @@ export function SmartMailbox() {
       });
       setDocuments(docs);
       setLoading(false);
+    }, (error) => {
+        console.error("Error fetching documents: ", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, isFirebaseEnabled]);
+
+  if (!isFirebaseEnabled) {
+    return (
+        <div>
+            <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><FolderOpen /> Your Smart Mailbox</h2>
+             <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Firebase Not Configured</AlertTitle>
+                <AlertDescription>
+                    Cannot load documents. Please configure your Firebase API keys to view your mailbox.
+                </AlertDescription>
+            </Alert>
+        </div>
+    )
+  }
 
   if (loading) {
       return (
