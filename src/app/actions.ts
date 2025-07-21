@@ -33,12 +33,11 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
     // In prototyping mode, we're skipping actual sign-in.
     // To make this work, we'd need to re-enable authentication.
     const user = auth?.currentUser;
-    if (!user) {
-        return { success: false, error: "User not authenticated. Please sign in to save documents." };
-    }
+    // For prototyping, let's use a mock user ID if none is present
+    const userId = user?.uid || 'prototyping-user';
 
     try {
-        const storagePath = `documents/${user.uid}/${Date.now()}-${input.filename}`;
+        const storagePath = `documents/${userId}/${Date.now()}-${input.filename}`;
         const storageRef = ref(storage, storagePath);
         
         // Upload image to Firebase Storage
@@ -47,7 +46,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
 
         // Save metadata to Firestore
         await addDoc(collection(db, "documents"), {
-            userId: user.uid,
+            userId: userId,
             filename: input.filename,
             tags: input.tags,
             storagePath,
@@ -58,8 +57,8 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
 
         revalidatePath("/dashboard");
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving document:", error);
-        return { success: false, error: "Failed to save document." };
+        return { success: false, error: error.message || "Failed to save document." };
     }
 }

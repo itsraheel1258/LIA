@@ -31,6 +31,7 @@ export function DocumentScanner() {
         setFileType('image');
       } else if (file.type === 'application/pdf') {
         setFileType('pdf');
+        // For PDFs, we need a different kind of preview
       } else {
         toast({
           variant: 'destructive',
@@ -91,14 +92,14 @@ export function DocumentScanner() {
     const filename = formData.get('filename') as string;
     const tags = aiResult.folderTags;
     
-    // The save action requires authentication, which we are skipping.
-    // For now, we can just show a success message and reset.
-    if (!isFirebaseEnabled || !user) {
+    // The save action requires authentication. Since we are in prototyping mode,
+    // we'll allow saving without a real user session.
+    if (!isFirebaseEnabled) {
         toast({
             title: "Save Skipped",
-            description: "Document saving is disabled in this prototyping mode.",
+            description: "Cannot save document. Firebase is not configured.",
         });
-        handleReset();
+        setScannerState("reviewing");
         return;
     }
     
