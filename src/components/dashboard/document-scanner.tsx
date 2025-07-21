@@ -31,21 +31,22 @@ export function DocumentScanner() {
 
   const startCamera = async () => {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: { ideal: 'environment' } } 
-        });
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play();
-            setScannerState("camera_active");
-        }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play(); // Explicitly play the video
+        setScannerState("camera_active");
+      }
     } catch (err) {
-        console.error("Error accessing camera: ", err);
-        toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please enable camera permissions in your browser settings to use this feature.',
-        });
+      console.error("Error accessing camera: ", err);
+      toast({
+        variant: "destructive",
+        title: "Camera Access Denied",
+        description:
+          "Please enable camera permissions in your browser settings to use this feature.",
+      });
     }
   };
 
@@ -325,3 +326,5 @@ export function DocumentScanner() {
     </Card>
   );
 }
+
+    
