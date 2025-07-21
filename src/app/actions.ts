@@ -10,9 +10,10 @@ export async function analyzeDocumentAction(dataUri: string) {
   try {
     const result = await generateSmartFilename({ photoDataUri: dataUri });
     return { success: true, data: result };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error analyzing document:", error);
-    return { success: false, error: "Failed to analyze document." };
+    // Pass the specific error message back to the client
+    return { success: false, error: error.message || "Failed to analyze document." };
   }
 }
 
@@ -28,9 +29,12 @@ interface SaveDocumentInput {
 }
 
 export async function saveDocumentAction(input: SaveDocumentInput) {
-    const user = auth.currentUser;
+    // This action requires an authenticated user.
+    // In prototyping mode, we're skipping actual sign-in.
+    // To make this work, we'd need to re-enable authentication.
+    const user = auth?.currentUser;
     if (!user) {
-        return { success: false, error: "User not authenticated." };
+        return { success: false, error: "User not authenticated. Please sign in to save documents." };
     }
 
     try {

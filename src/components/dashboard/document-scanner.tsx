@@ -72,11 +72,11 @@ export function DocumentScanner() {
         });
         setScannerState("capturing");
       }
-    } catch (error) {
+    } catch (error: any) {
        toast({
           variant: "destructive",
           title: "Analysis Failed",
-          description: "An unexpected error occurred during analysis.",
+          description: error.message || "An unexpected error occurred during analysis.",
         });
         setScannerState("capturing");
     }
@@ -84,12 +84,23 @@ export function DocumentScanner() {
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!imagePreview || !aiResult || !isFirebaseEnabled) return;
+    if (!imagePreview || !aiResult ) return;
     setScannerState("saving");
 
     const formData = new FormData(event.currentTarget);
     const filename = formData.get('filename') as string;
     const tags = aiResult.folderTags;
+    
+    // The save action requires authentication, which we are skipping.
+    // For now, we can just show a success message and reset.
+    if (!isFirebaseEnabled || !user) {
+        toast({
+            title: "Save Skipped",
+            description: "Document saving is disabled in this prototyping mode.",
+        });
+        handleReset();
+        return;
+    }
     
     const result = await saveDocumentAction({
         imageDataUri: imagePreview,
@@ -177,15 +188,7 @@ export function DocumentScanner() {
         {scannerState === "reviewing" && imagePreview && aiResult && (
            <form onSubmit={handleSave} className="space-y-6">
                 {renderPreview()}
-                {!isFirebaseEnabled && (
-                    <Alert variant="destructive" className="mt-4">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Firebase Not Configured</AlertTitle>
-                        <AlertDescription>
-                        Cannot save document. Please configure your Firebase API keys.
-                        </AlertDescription>
-                    </Alert>
-                )}
+                
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="filename" className="block text-sm font-medium text-muted-foreground mb-1">Filename</label>
@@ -205,7 +208,7 @@ export function DocumentScanner() {
                 </div>
                 <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={handleReset}><Trash2 className="mr-2 h-4 w-4"/> Start Over</Button>
-                    <Button type="submit" disabled={!isFirebaseEnabled}><Save className="mr-2 h-4 w-4"/> Save to Mailbox</Button>
+                    <Button type="submit"><Save className="mr-2 h-4 w-4"/> Save to Mailbox</Button>
                 </div>
             </form>
         )}
