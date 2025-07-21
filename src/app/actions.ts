@@ -5,6 +5,8 @@ import { generateSmartFilename } from "@/ai/flows/generate-filename";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { revalidatePath } from "next/cache";
+
+// Import server-side Firebase services directly here to ensure they are initialized correctly.
 import { db, storage } from "@/lib/firebase/server";
 
 export async function analyzeDocumentAction(dataUri: string) {

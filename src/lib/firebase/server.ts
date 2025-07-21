@@ -14,6 +14,8 @@ let app: FirebaseApp;
 // Check if the app is already initialized to prevent re-initialization
 if (!getApps().length) {
     if (!firebaseConfig.apiKey) {
+        console.error("Firebase API key is missing from .env.local. Server-side operations will fail.");
+        // We throw an error here to make it obvious that config is missing.
         throw new Error("Firebase API key is missing. Please check your .env.local file.");
     }
     app = initializeApp(firebaseConfig);
