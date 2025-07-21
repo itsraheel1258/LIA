@@ -1,10 +1,13 @@
+
 "use server";
 
 import { generateSmartFilename } from "@/ai/flows/generate-filename";
-import { auth, db, storage } from "@/lib/firebase/client";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getDownloadURL, ref, uploadString } from "firebase/storage";
+import { getApp, getApps, initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { addDoc, collection, getFirestore, serverTimestamp } from "firebase/firestore";
+import { getDownloadURL, getStorage, ref, uploadString } from "firebase/storage";
 import { revalidatePath } from "next/cache";
+import { firebaseConfig } from "@/lib/firebase/config";
 
 export async function analyzeDocumentAction(dataUri: string) {
   try {
@@ -29,6 +32,12 @@ interface SaveDocumentInput {
 }
 
 export async function saveDocumentAction(input: SaveDocumentInput) {
+    // Initialize Firebase Admin on the server-side
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
     // This action requires an authenticated user.
     // In prototyping mode, we're skipping actual sign-in.
     // To make this work, we'd need to re-enable authentication.
