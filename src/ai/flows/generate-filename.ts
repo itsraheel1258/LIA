@@ -39,9 +39,9 @@ const generateSmartFilenamePrompt = ai.definePrompt({
   name: 'generateSmartFilenamePrompt',
   input: {schema: GenerateSmartFilenameInputSchema},
   output: {schema: GenerateSmartFilenameOutputSchema},
-  prompt: `You are an AI assistant that analyzes document images and generates smart, human-readable filenames, folder tags and metadata for them.
+  prompt: `You are an AI assistant that analyzes document images and generates smart, human-readable filenames and metadata for them.
 
-Analyze the document in the image and extract information to create a filename, folder tags, and metadata.
+Analyze the document in the image and extract information to create a filename and metadata. The folderTags should be a simple list of keywords.
 
 Filename:
 - Create a descriptive and human-readable filename that includes relevant information such as the document type, sender, and date.
@@ -49,7 +49,7 @@ Filename:
 
 Folder Tags:
 - Suggest relevant folder tags for organizing the document.
-- Examples: ["Finance > Banking", "Healthcare > Insurance"]
+- Examples: ["Finance", "Banking", "Healthcare", "Insurance"]
 
 Metadata:
 - Extract and provide metadata such as sender, date, and category, if available.
