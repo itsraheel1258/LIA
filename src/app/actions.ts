@@ -2,12 +2,10 @@
 "use server";
 
 import { generateSmartFilename } from "@/ai/flows/generate-filename";
-import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { addDoc, collection, getFirestore, serverTimestamp } from "firebase/firestore";
-import { getDownloadURL, getStorage, ref, uploadString } from "firebase/storage";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { revalidatePath } from "next/cache";
-import { firebaseConfig } from "@/lib/firebase/config";
+import { db, storage } from "@/lib/firebase/server";
 
 export async function analyzeDocumentAction(dataUri: string) {
   try {
@@ -32,11 +30,6 @@ interface SaveDocumentInput {
 }
 
 export async function saveDocumentAction(input: SaveDocumentInput) {
-    // Initialize Firebase Admin on the server-side
-    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-
     // For prototyping, we use a static user ID to bypass authentication rules.
     const userId = 'prototyping-user';
 
@@ -63,8 +56,8 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         return { success: true };
     } catch (error: any) {
         console.error("Error saving document:", error);
-        if (error.code === 'storage/unknown') {
-            return { success: false, error: "Save failed. Have you enabled Cloud Storage in your Firebase project console? Go to the 'Storage' tab and click 'Get Started'." };
+        if (error.code === 'storage/unknown' || error.code === 'storage/object-not-found') {
+             return { success: false, error: "Save failed. Have you enabled Cloud Storage in your Firebase project console? Go to the 'Storage' tab and click 'Get Started'." };
         }
         return { success: false, error: error.message || "Failed to save document." };
     }
