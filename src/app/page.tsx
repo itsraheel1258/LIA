@@ -43,7 +43,7 @@ export default function Home() {
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Firebase Not Configured</AlertTitle>
                     <AlertDescription>
-                        Your Firebase API keys are missing. Please add them to a <code>.env.local</code> file to enable authentication and database features.
+                        Your Firebase API keys are missing or invalid. Please check your <code>.env.local</code> file and ensure the keys from your Firebase project are copied correctly.
                     </AlertDescription>
                 </Alert>
             )}
