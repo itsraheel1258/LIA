@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { useRouter } from 'next/navigation';
@@ -23,6 +23,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
+    // This check ensures we only try to use Firebase on the client side
+    // where it has been initialized.
     if (auth) {
       setIsFirebaseEnabled(true);
       const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -31,6 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       return () => unsubscribe();
     } else {
+      // If auth is not available (e.g., server-side or missing config),
+      // we reflect that in the state.
       setIsFirebaseEnabled(false);
       setLoading(false);
     }
@@ -39,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     if (!auth) {
         console.error("Firebase is not configured. Cannot sign in.");
-        return;
+        throw new Error("Firebase is not configured.");
     }
     const provider = new GoogleAuthProvider();
     try {
