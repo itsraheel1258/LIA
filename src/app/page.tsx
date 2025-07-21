@@ -6,18 +6,25 @@ import { useRouter } from "next/navigation";
 import { Mail, Sparkles, LogIn, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { user, loading, signInWithGoogle, isFirebaseEnabled } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleSignIn = async () => {
     if (!isFirebaseEnabled) return;
     try {
       await signInWithGoogle();
       router.push("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sign in failed", error);
+      toast({
+        variant: "destructive",
+        title: "Sign-In Failed",
+        description: "Could not sign in. Please check your Firebase configuration and ensure the API key is valid.",
+      });
     }
   };
 
