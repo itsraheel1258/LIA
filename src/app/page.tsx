@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { Mail, Sparkles, LogIn, AlertTriangle } from "lucide-react";
+import { Mail, Sparkles, LogIn, AlertTriangle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -70,14 +70,8 @@ export default function Home() {
                   Go to Your Dashboard
                 </Button>
               ) : (
-                <Button size="lg" onClick={handleSignIn} disabled={loading || !isFirebaseEnabled} className="font-headline">
-                  {loading ? (
-                    "Loading..."
-                  ) : (
-                    <>
-                      <LogIn className="mr-2 h-5 w-5" /> Sign In with Google
-                    </>
-                  )}
+                <Button size="lg" onClick={handleGoToDashboard} className="font-headline">
+                    Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
             </div>
