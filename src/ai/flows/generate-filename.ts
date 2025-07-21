@@ -41,22 +41,15 @@ const generateSmartFilenamePrompt = ai.definePrompt({
   output: {schema: GenerateSmartFilenameOutputSchema},
   prompt: `You are an AI assistant that analyzes document images and generates smart, human-readable filenames and metadata for them.
 
-Analyze the document in the image and extract information to create a filename and metadata. The folderTags should be a simple list of keywords.
+Analyze the document in the image and extract information to create a filename, folder tags and metadata. The folderTags should be a simple list of keywords.
 
-Filename:
-- Create a descriptive and human-readable filename that includes relevant information such as the document type, sender, and date.
-- Example: "Bank Statement - Chase - June 2024"
-
-Folder Tags:
-- Suggest relevant folder tags for organizing the document.
-- Examples: ["Finance", "Banking", "Healthcare", "Insurance"]
-
-Metadata:
-- Extract and provide metadata such as sender, date, and category, if available.
+The filename should be descriptive and human-readable, like "Bank Statement - Chase - June 2024".
+The folderTags should be relevant for organizing, like ["Finance", "Banking"].
+The metadata should include sender, date, and category if available.
 
 Here is the document image: {{media url=photoDataUri}}
 
-Return the filename, folder tags and metadata as a JSON object. Furthermore, remove any '\n' characters from the filename and metadata fields.`, // Added instruction to remove '\n'
+Return the filename, folderTags, and metadata as a JSON object.`,
 });
 
 const generateSmartFilenameFlow = ai.defineFlow(
@@ -67,6 +60,13 @@ const generateSmartFilenameFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await generateSmartFilenamePrompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('Failed to get a response from the AI model.');
+    }
+    // A fallback in case the model doesn't generate tags
+    if (!output.folderTags || output.folderTags.length === 0) {
+      output.folderTags = ['Uncategorized'];
+    }
+    return output;
   }
 );

@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Camera, Loader2, Sparkles, Upload, FileEdit, Save, Trash2, XCircle, AlertTriangle } from "lucide-react";
+import { Camera, Loader2, Sparkles, Upload, FileEdit, Save, Trash2, XCircle, AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,12 +20,26 @@ export function DocumentScanner() {
   const { user, isFirebaseEnabled } = useAuth();
   const [scannerState, setScannerState] = useState<ScannerState>("idle");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
   const [aiResult, setAiResult] = useState<GenerateSmartFilenameOutput | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.type.startsWith('image/')) {
+        setFileType('image');
+      } else if (file.type === 'application/pdf') {
+        setFileType('pdf');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Unsupported File Type',
+          description: 'Please upload an image or a PDF file.',
+        });
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -39,22 +53,32 @@ export function DocumentScanner() {
     setScannerState("idle");
     setImagePreview(null);
     setAiResult(null);
+    setFileType(null);
   };
 
   const handleAnalyze = async () => {
     if (!imagePreview) return;
     setScannerState("processing");
-    const result = await analyzeDocumentAction(imagePreview);
-    if (result.success && result.data) {
-      setAiResult(result.data);
-      setScannerState("reviewing");
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: result.error,
-      });
-      setScannerState("capturing");
+    try {
+      const result = await analyzeDocumentAction(imagePreview);
+      if (result.success && result.data) {
+        setAiResult(result.data);
+        setScannerState("reviewing");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Analysis Failed",
+          description: result.error || "Lia could not understand this document.",
+        });
+        setScannerState("capturing");
+      }
+    } catch (error) {
+       toast({
+          variant: "destructive",
+          title: "Analysis Failed",
+          description: "An unexpected error occurred during analysis.",
+        });
+        setScannerState("capturing");
     }
   };
 
@@ -65,7 +89,7 @@ export function DocumentScanner() {
 
     const formData = new FormData(event.currentTarget);
     const filename = formData.get('filename') as string;
-    const tags = aiResult.folderTags; // For simplicity, not making tags editable in this form
+    const tags = aiResult.folderTags;
     
     const result = await saveDocumentAction({
         imageDataUri: imagePreview,
@@ -90,6 +114,19 @@ export function DocumentScanner() {
     }
   };
 
+  const renderPreview = () => {
+    if (!imagePreview) return null;
+    if (fileType === 'pdf') {
+      return (
+        <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
+          <FileText className="h-24 w-24 text-primary" />
+          <p className="mt-4 text-sm text-muted-foreground">PDF Document Ready for Analysis</p>
+        </div>
+      );
+    }
+    return <Image src={imagePreview} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
+  }
+
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader>
@@ -102,7 +139,7 @@ export function DocumentScanner() {
             Hello {user?.displayName?.split(' ')[0] || 'there'}! Ready to scan?
         </CardTitle>
         <CardDescription>
-          {scannerState === 'idle' && 'Click the button below to scan a document with your camera.'}
+          {scannerState === 'idle' && 'Click the button below to scan or upload a document.'}
           {scannerState === 'capturing' && 'Your document is ready. Let Lia work her magic!'}
           {scannerState === 'processing' && 'Lia is analyzing your document, please wait a moment...'}
           {scannerState === 'reviewing' && "Here's what Lia found. You can edit the details before saving."}
@@ -117,15 +154,16 @@ export function DocumentScanner() {
               className="cursor-pointer inline-flex items-center justify-center rounded-full border-4 border-primary/20 bg-primary/10 h-32 w-32 transition-transform hover:scale-105"
             >
                 <Camera className="h-12 w-12 text-primary" />
-                <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/*" capture="environment" onChange={handleFileChange} />
+                <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/*,application/pdf" onChange={handleFileChange} />
             </label>
-            <p className="mt-4 text-muted-foreground font-medium">Tap to Scan Document</p>
+            <p className="mt-4 text-muted-foreground font-medium">Tap to Scan or Upload</p>
+            <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs</p>
           </div>
         )}
 
         {(scannerState === "capturing" || scannerState === "processing") && imagePreview && (
           <div className="space-y-4">
-             <Image src={imagePreview} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
+            {renderPreview()}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleReset} disabled={scannerState === 'processing'}> <XCircle className="mr-2 h-4 w-4"/> Cancel</Button>
               <Button onClick={handleAnalyze} disabled={scannerState === 'processing'}>
@@ -138,7 +176,7 @@ export function DocumentScanner() {
 
         {scannerState === "reviewing" && imagePreview && aiResult && (
            <form onSubmit={handleSave} className="space-y-6">
-                <Image src={imagePreview} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
+                {renderPreview()}
                 {!isFirebaseEnabled && (
                     <Alert variant="destructive" className="mt-4">
                         <AlertTriangle className="h-4 w-4" />
@@ -176,7 +214,7 @@ export function DocumentScanner() {
             <div className="flex flex-col items-center gap-4 py-8">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <p className="text-muted-foreground">Saving your document securely...</p>
-                 <Image src={imagePreview} alt="Document preview" width={200} height={250} className="rounded-lg opacity-50" />
+                 {renderPreview()}
             </div>
         )}
 
