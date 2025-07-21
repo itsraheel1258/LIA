@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Camera, Loader2, Sparkles, Upload, FileEdit, Save, Trash2, XCircle, AlertTriangle, FileText } from "lucide-react";
+import { Camera, Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 import { Textarea } from "../ui/textarea";
 
-type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
+type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving" | "camera_active";
 
 export function DocumentScanner() {
   const { user, isFirebaseEnabled } = useAuth();
@@ -24,6 +24,54 @@ export function DocumentScanner() {
   const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
   const [aiResult, setAiResult] = useState<GenerateSmartFilenameOutput | null>(null);
   const { toast } = useToast();
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+        setScannerState("camera_active");
+      }
+    } catch (err) {
+      console.error("Error accessing camera: ", err);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Access Denied',
+        description: 'Please enable camera permissions in your browser settings.',
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const handleCapture = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        const dataUri = canvas.toDataURL('image/jpeg');
+        setImagePreview(dataUri);
+        setFileType('image');
+        setScannerState('capturing');
+        stopCamera();
+      }
+    }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -32,7 +80,6 @@ export function DocumentScanner() {
         setFileType('image');
       } else if (file.type === 'application/pdf') {
         setFileType('pdf');
-        // For PDFs, we need a different kind of preview
       } else {
         toast({
           variant: 'destructive',
@@ -41,7 +88,6 @@ export function DocumentScanner() {
         });
         return;
       }
-
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -52,11 +98,17 @@ export function DocumentScanner() {
   };
   
   const handleReset = () => {
+    stopCamera();
     setScannerState("idle");
     setImagePreview(null);
     setAiResult(null);
     setFileType(null);
   };
+  
+  const handleBackToIdle = () => {
+    stopCamera();
+    setScannerState("idle");
+  }
 
   const handleAnalyze = async () => {
     if (!imagePreview) return;
@@ -139,12 +191,19 @@ export function DocumentScanner() {
     }
     return <Image src={imagePreview} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
   }
+  
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    }
+  }, []);
 
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
             {scannerState === 'idle' && <Camera />}
+            {scannerState === 'camera_active' && <Camera />}
             {scannerState === 'capturing' && <FileEdit />}
             {scannerState === 'processing' && <Loader2 className="animate-spin"/>}
             {scannerState === 'reviewing' && <Sparkles />}
@@ -153,6 +212,7 @@ export function DocumentScanner() {
         </CardTitle>
         <CardDescription>
           {scannerState === 'idle' && 'Click the button below to scan or upload a document.'}
+          {scannerState === 'camera_active' && 'Position the document within the frame and capture.'}
           {scannerState === 'capturing' && 'Your document is ready. Let Lia work her magic!'}
           {scannerState === 'processing' && 'Lia is analyzing your document, please wait a moment...'}
           {scannerState === 'reviewing' && "Here's what Lia found. You can edit the details before saving."}
@@ -161,16 +221,47 @@ export function DocumentScanner() {
       </CardHeader>
       <CardContent>
         {scannerState === "idle" && (
-          <div className="text-center p-8 border-2 border-dashed rounded-lg">
-             <label
-              htmlFor="file-upload"
-              className="cursor-pointer inline-flex items-center justify-center rounded-full border-4 border-primary/20 bg-primary/10 h-32 w-32 transition-transform hover:scale-105"
-            >
-                <Camera className="h-12 w-12 text-primary" />
-                <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/*,application/pdf" onChange={handleFileChange} />
-            </label>
-            <p className="mt-4 text-muted-foreground font-medium">Tap to Scan or Upload</p>
+          <div className="text-center p-8 border-2 border-dashed rounded-lg space-y-4">
+            <Button size="lg" onClick={startCamera}>
+              <Camera className="mr-2 h-6 w-6" />
+              Scan Document
+            </Button>
+            <div>
+              <p className="text-sm text-muted-foreground my-2">or</p>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                Upload File
+              </Button>
+              <input
+                id="file-upload"
+                name="file-upload"
+                type="file"
+                className="sr-only"
+                accept="image/*,application/pdf"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+              />
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs</p>
+          </div>
+        )}
+
+        {scannerState === "camera_active" && (
+          <div className="relative space-y-4">
+              <video ref={videoRef} className="w-full rounded-lg" playsInline autoPlay muted />
+              <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+                  <div className="w-full h-full border-4 border-dashed border-primary/50 rounded-lg" />
+              </div>
+              <canvas ref={canvasRef} className="hidden" />
+              <div className="flex justify-between items-center">
+                  <Button variant="ghost" onClick={handleBackToIdle}><ArrowLeft className="mr-2"/> Back</Button>
+                  <Button
+                      onClick={handleCapture}
+                      className="rounded-full h-16 w-16 border-4 border-primary/30 bg-primary/20 hover:bg-primary/30"
+                  >
+                      <Camera className="h-8 w-8 text-primary" />
+                  </Button>
+                  <div className="w-20"></div>
+              </div>
           </div>
         )}
 
