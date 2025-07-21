@@ -22,6 +22,7 @@ export type GenerateSmartFilenameInput = z.infer<typeof GenerateSmartFilenameInp
 
 const GenerateSmartFilenameOutputSchema = z.object({
   filename: z.string().describe('A smart, human-readable filename for the document.'),
+  summary: z.string().describe('A concise, one to two-sentence summary of the document.'),
   folderTags: z.array(z.string()).describe('Suggested folder tags for the document.'),
   metadata: z.object({
     sender: z.string().optional().describe('The sender of the document, if identifiable.'),
@@ -41,11 +42,11 @@ const generateSmartFilenamePrompt = ai.definePrompt({
   output: {schema: GenerateSmartFilenameOutputSchema},
   prompt: `You are an AI assistant that analyzes document images and generates smart, human-readable filenames and metadata.
 
-Analyze the document in the image provided. Based on the document's content, generate a descriptive filename, a list of folder tags, and extract any available metadata (sender, date, category).
-
-- The filename should be concise and descriptive (e.g., "Bank Statement - Chase - June 2024").
-- The folderTags should be a simple list of keywords for organization (e.g., ["Finance", "Banking"]).
-- The metadata should include the sender, date, and category if they can be identified.
+Analyze the document in the image provided. Based on the document's content, generate the following:
+- A descriptive filename (e.g., "Bank Statement - Chase - June 2024").
+- A concise, one to two-sentence summary of the document's content.
+- A list of folder tags for organization (e.g., ["Finance", "Banking"]).
+- Extract any available metadata (sender, date, category).
 
 Here is the document image: {{media url=photoDataUri}}
 

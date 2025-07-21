@@ -13,6 +13,7 @@ import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
+import { Textarea } from "../ui/textarea";
 
 type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
 
@@ -69,7 +70,7 @@ export function DocumentScanner() {
         toast({
           variant: "destructive",
           title: "Analysis Failed",
-          description: result.error || "Lia could not understand this document.",
+          description: result.error || "Lia could not understand this document. Please check your Gemini API key.",
         });
         setScannerState("capturing");
       }
@@ -90,10 +91,9 @@ export function DocumentScanner() {
 
     const formData = new FormData(event.currentTarget);
     const filename = formData.get('filename') as string;
+    const summary = formData.get('summary') as string;
     const tags = aiResult.folderTags;
     
-    // The save action requires authentication. Since we are in prototyping mode,
-    // we'll allow saving without a real user session.
     if (!isFirebaseEnabled) {
         toast({
             title: "Save Skipped",
@@ -107,6 +107,7 @@ export function DocumentScanner() {
         imageDataUri: imagePreview,
         filename,
         tags,
+        summary,
         metadata: aiResult.metadata
     });
 
@@ -194,6 +195,10 @@ export function DocumentScanner() {
                     <div>
                         <label htmlFor="filename" className="block text-sm font-medium text-muted-foreground mb-1">Filename</label>
                         <Input id="filename" name="filename" defaultValue={aiResult.filename} className="font-medium" />
+                    </div>
+                     <div>
+                        <label htmlFor="summary" className="block text-sm font-medium text-muted-foreground mb-1">Summary</label>
+                        <Textarea id="summary" name="summary" defaultValue={aiResult.summary} rows={3} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-2">Suggested Tags</label>

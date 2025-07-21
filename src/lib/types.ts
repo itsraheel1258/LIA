@@ -6,11 +6,12 @@ export interface Document {
   filename: string;
   tags: string[];
   storagePath: string;
-  downloadUrl: string;
+  downloadUrl:string;
   metadata: {
     sender?: string;
     date?: string;
     category?: string;
+    summary?: string;
   };
   createdAt: Timestamp;
 }

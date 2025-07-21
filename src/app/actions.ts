@@ -5,9 +5,23 @@ import { generateSmartFilename } from "@/ai/flows/generate-filename";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { revalidatePath } from "next/cache";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import { firebaseConfig } from "@/lib/firebase/config";
 
-// Import server-side Firebase services directly here to ensure they are initialized correctly.
-import { db, storage } from "@/lib/firebase/server";
+// Helper function to initialize Firebase on the server
+function initializeServerApp() {
+    if (getApps().length === 0) {
+        if (!firebaseConfig.apiKey) {
+            throw new Error("Firebase API key is missing from .env.local. Server-side operations will fail.");
+        }
+        return initializeApp(firebaseConfig);
+    } else {
+        return getApp();
+    }
+}
+
 
 export async function analyzeDocumentAction(dataUri: string) {
   try {
@@ -24,6 +38,7 @@ interface SaveDocumentInput {
   imageDataUri: string;
   filename: string;
   tags: string[];
+  summary: string;
   metadata: {
     sender?: string;
     date?: string;
@@ -32,6 +47,10 @@ interface SaveDocumentInput {
 }
 
 export async function saveDocumentAction(input: SaveDocumentInput) {
+    const app = initializeServerApp();
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
     // For prototyping, we use a static user ID to bypass authentication rules.
     const userId = 'prototyping-user';
 
@@ -50,7 +69,10 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
             tags: input.tags,
             storagePath,
             downloadUrl,
-            metadata: input.metadata,
+            metadata: {
+                ...input.metadata,
+                summary: input.summary,
+            },
             createdAt: serverTimestamp(),
         });
 
