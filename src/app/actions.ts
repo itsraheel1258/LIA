@@ -34,16 +34,11 @@ interface SaveDocumentInput {
 export async function saveDocumentAction(input: SaveDocumentInput) {
     // Initialize Firebase Admin on the server-side
     const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
 
-    // This action requires an authenticated user.
-    // In prototyping mode, we're skipping actual sign-in.
-    // To make this work, we'd need to re-enable authentication.
-    const user = auth?.currentUser;
-    // For prototyping, let's use a mock user ID if none is present
-    const userId = user?.uid || 'prototyping-user';
+    // For prototyping, we use a static user ID to bypass authentication rules.
+    const userId = 'prototyping-user';
 
     try {
         const storagePath = `documents/${userId}/${Date.now()}-${input.filename}`;
