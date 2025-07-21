@@ -30,22 +30,38 @@ export function DocumentScanner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startCamera = async () => {
+    const startStream = async (constraints: MediaStreamConstraints) => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                videoRef.current.play();
+                setScannerState("camera_active");
+            }
+        } catch (err) {
+            throw err;
+        }
+    };
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setScannerState("camera_active");
-      }
+        // First, try to get the environment-facing camera
+        await startStream({ video: { facingMode: 'environment' } });
     } catch (err) {
-      console.error("Error accessing camera: ", err);
-      toast({
-        variant: 'destructive',
-        title: 'Camera Access Denied',
-        description: 'Please enable camera permissions in your browser settings.',
-      });
+        console.warn("Could not get environment camera, falling back to any camera.", err);
+        try {
+            // If that fails, fall back to any available camera
+            await startStream({ video: true });
+        } catch (finalErr) {
+            console.error("Error accessing camera: ", finalErr);
+            toast({
+                variant: 'destructive',
+                title: 'Camera Access Denied',
+                description: 'Please enable camera permissions in your browser settings.',
+            });
+        }
     }
   };
+
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
