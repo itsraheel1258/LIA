@@ -63,6 +63,9 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         return { success: true };
     } catch (error: any) {
         console.error("Error saving document:", error);
+        if (error.code === 'storage/unknown') {
+            return { success: false, error: "Save failed. Have you enabled Cloud Storage in your Firebase project console? Go to the 'Storage' tab and click 'Get Started'." };
+        }
         return { success: false, error: error.message || "Failed to save document." };
     }
 }
