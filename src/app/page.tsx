@@ -7,11 +7,19 @@ import { Mail, Sparkles, LogIn, AlertTriangle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const { user, loading, signInWithGoogle, isFirebaseEnabled } = useAuth();
+  const [showFirebaseAlert, setShowFirebaseAlert] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // This check runs only on the client, after hydration
+    setShowFirebaseAlert(!isFirebaseEnabled);
+  }, [isFirebaseEnabled]);
+
 
   const handleSignIn = async () => {
     if (!isFirebaseEnabled) return;
@@ -45,7 +53,7 @@ export default function Home() {
       <main className="flex-grow flex items-center">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-3xl mx-auto">
-            {!isFirebaseEnabled && (
+            {showFirebaseAlert && (
                 <Alert variant="destructive" className="mb-8 text-left">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Firebase Not Configured</AlertTitle>
