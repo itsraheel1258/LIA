@@ -7,23 +7,44 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 import { firebaseConfig } from "./config";
 
-let app: FirebaseApp;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-let storage: FirebaseStorage | null = null;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
+let storage: FirebaseStorage | undefined;
 
-// This check ensures Firebase is initialized only on the client side.
-if (typeof window !== "undefined") {
-    if (firebaseConfig.apiKey) {
-        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-        auth = getAuth(app);
-        db = getFirestore(app);
-        storage = getStorage(app);
+function initializeFirebase() {
+    if (firebaseConfig.apiKey && typeof window !== 'undefined') {
+        if (!getApps().length) {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                storage = getStorage(app);
+            } catch (e) {
+                console.error("Failed to initialize Firebase", e)
+            }
+        } else {
+            app = getApp();
+            auth = getAuth(app);
+            db = getFirestore(app);
+            storage = getStorage(app);
+        }
     } else {
-        console.error("Firebase API key is missing. Please add it to your .env.local file. The app will not function correctly without it.");
+        console.warn("Firebase API key is missing or not in a client environment. Firebase will not be initialized.");
     }
 }
 
-// We export the initialized services. They will be null on the server.
-// Components using these should ensure they only run on the client.
-export { app, auth, db, storage };
+// Initialize on script load
+initializeFirebase();
+
+// We export a getter function to ensure that consumers of these services
+// always get the initialized instances.
+export function getFirebase() {
+    // This check is in case initialization failed.
+    if (!app) {
+        // You might want to throw an error or handle this case differently.
+        console.error("Firebase has not been initialized.");
+        return { app: null, auth: null, db: null, storage: null, isFirebaseEnabled: false };
+    }
+    return { app, auth, db, storage, isFirebaseEnabled: !!app };
+}

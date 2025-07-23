@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { getFirebase } from '@/lib/firebase/client';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -23,23 +23,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // auth will be null on the server and non-null on the client if configured.
+    const { auth, isFirebaseEnabled: enabled } = getFirebase();
+    setIsFirebaseEnabled(enabled);
+
     if (auth) {
-      setIsFirebaseEnabled(true);
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         setUser(user);
         setLoading(false);
       });
       return () => unsubscribe();
     } else {
-      // If auth is not available (e.g., server-side or missing config),
-      // we reflect that in the state.
-      setIsFirebaseEnabled(false);
       setLoading(false);
     }
   }, []);
 
   const signInWithGoogle = async () => {
+    const { auth } = getFirebase();
     if (!auth) {
         console.error("Firebase is not configured. Cannot sign in.");
         throw new Error("Firebase is not configured.");
@@ -54,6 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    const { auth } = getFirebase();
     if (!auth) {
         console.error("Firebase is not configured. Cannot log out.");
         return;

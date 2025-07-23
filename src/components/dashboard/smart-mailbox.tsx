@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { db } from "@/lib/firebase/client";
+import { getFirebase } from "@/lib/firebase/client";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ export function SmartMailbox() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const { db } = getFirebase();
     if (!user || !isFirebaseEnabled || !db) {
       setLoading(false);
       return;
