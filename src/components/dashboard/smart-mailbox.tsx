@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { getFirebase } from "@/lib/firebase/client";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,12 +15,11 @@ import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 export function SmartMailbox() {
-  const { user, isFirebaseEnabled } = useAuth();
+  const { user, isFirebaseEnabled, db } = useAuth();
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { db } = getFirebase();
     if (!user || !isFirebaseEnabled || !db) {
       setLoading(false);
       return;
@@ -53,7 +51,7 @@ export function SmartMailbox() {
     });
 
     return () => unsubscribe();
-  }, [user, isFirebaseEnabled]);
+  }, [user, isFirebaseEnabled, db]);
 
   if (!isFirebaseEnabled) {
     return (

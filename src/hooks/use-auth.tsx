@@ -3,10 +3,21 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, type User } from 'firebase/auth';
-import { getFirebase } from '@/lib/firebase/client';
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
+import { firebaseConfig } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 
-interface AuthContextType {
+interface FirebaseServices {
+  app: FirebaseApp | null;
+  auth: Auth | null;
+  db: Firestore | null;
+  storage: FirebaseStorage | null;
+}
+
+interface AuthContextType extends FirebaseServices {
   user: User | null;
   loading: boolean;
   isFirebaseEnabled: boolean;
@@ -16,16 +27,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// This function initializes Firebase and returns the services.
+// It's defined outside the provider to be stable.
+const initializeFirebase = (): FirebaseServices & { isFirebaseEnabled: boolean } => {
+    if (firebaseConfig.apiKey && typeof window !== 'undefined') {
+        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        return { app, auth, db, storage, isFirebaseEnabled: true };
+    }
+    return { app: null, auth: null, db: null, storage: null, isFirebaseEnabled: false };
+};
+
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isFirebaseEnabled, setIsFirebaseEnabled] = useState(false);
+  
+  // Initialize Firebase right away.
+  const { app, auth, db, storage, isFirebaseEnabled } = initializeFirebase();
+  
   const router = useRouter();
 
   useEffect(() => {
-    const { auth, isFirebaseEnabled: enabled } = getFirebase();
-    setIsFirebaseEnabled(enabled);
-
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         setUser(user);
@@ -35,10 +60,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [auth]);
 
   const signInWithGoogle = async () => {
-    const { auth } = getFirebase();
     if (!auth) {
         console.error("Firebase is not configured. Cannot sign in.");
         throw new Error("Firebase is not configured.");
@@ -53,7 +77,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    const { auth } = getFirebase();
     if (!auth) {
         console.error("Firebase is not configured. Cannot log out.");
         return;
@@ -67,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isFirebaseEnabled, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, app, auth, db, storage, isFirebaseEnabled, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
