@@ -21,19 +21,15 @@ export function SmartMailbox() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In prototyping mode, we need a user ID to fetch documents.
-    // We'll use the authenticated user's ID or a static one.
-    const userId = user?.uid || 'prototyping-user';
-
-    if (!isFirebaseEnabled) {
-        setLoading(false);
-        return;
-    };
+    if (!user || !isFirebaseEnabled) {
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     const q = query(
         collection(db, "documents"), 
-        where("userId", "==", userId),
+        where("userId", "==", user.uid),
         orderBy("createdAt", "desc")
     );
 

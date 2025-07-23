@@ -70,8 +70,9 @@ export default function Home() {
                   Go to Your Dashboard
                 </Button>
               ) : (
-                <Button size="lg" onClick={handleGoToDashboard} className="font-headline">
-                    Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+                <Button size="lg" onClick={handleSignIn} disabled={!isFirebaseEnabled || loading} className="font-headline">
+                    <LogIn className="mr-2 h-5 w-5" />
+                    {loading ? "Loading..." : "Sign In & Get Started"}
                 </Button>
               )}
             </div>

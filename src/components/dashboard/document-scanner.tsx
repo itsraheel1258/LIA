@@ -7,7 +7,6 @@ import { Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, UploadClo
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 import { useToast } from "@/hooks/use-toast";
@@ -88,7 +87,7 @@ export function DocumentScanner() {
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!imagePreview || !aiResult ) return;
+    if (!imagePreview || !aiResult || !user ) return;
     setScannerState("saving");
 
     const formData = new FormData(event.currentTarget);
@@ -107,6 +106,7 @@ export function DocumentScanner() {
     }
     
     const result = await saveDocumentAction({
+        userId: user.uid,
         imageDataUri: imagePreview,
         filename,
         tags,
@@ -165,7 +165,7 @@ export function DocumentScanner() {
       <CardContent>
         {scannerState === "idle" && (
           <div className="text-center p-8 border-2 border-dashed rounded-lg space-y-4">
-            <Button size="lg" onClick={() => fileInputRef.current?.click()} className="font-headline">
+             <Button size="lg" onClick={() => fileInputRef.current?.click()} className="font-headline">
               <UploadCloud className="mr-2 h-6 w-6" />
               Upload File
             </Button>
@@ -178,7 +178,7 @@ export function DocumentScanner() {
               ref={fileInputRef}
               onChange={handleFileChange}
             />
-            <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs. You can also take a photo.</p>
+             <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs. You can also take a photo.</p>
           </div>
         )}
 

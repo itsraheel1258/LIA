@@ -35,6 +35,7 @@ export async function analyzeDocumentAction(dataUri: string) {
 }
 
 interface SaveDocumentInput {
+  userId: string;
   imageDataUri: string;
   filename: string;
   tags: string[];
@@ -51,11 +52,12 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
     const db = getFirestore(app);
     const storage = getStorage(app);
 
-    // For prototyping, we use a static user ID to bypass authentication rules.
-    const userId = 'prototyping-user';
+    if (!input.userId) {
+        return { success: false, error: "Authentication error: User ID is missing." };
+    }
 
     try {
-        const storagePath = `documents/${userId}/${Date.now()}-${input.filename}`;
+        const storagePath = `documents/${input.userId}/${Date.now()}-${input.filename}`;
         const storageRef = ref(storage, storagePath);
         
         // Upload image to Firebase Storage
@@ -64,7 +66,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
 
         // Save metadata to Firestore
         await addDoc(collection(db, "documents"), {
-            userId: userId,
+            userId: input.userId,
             filename: input.filename,
             tags: input.tags,
             storagePath,
@@ -80,6 +82,9 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         return { success: true };
     } catch (error: any) {
         console.error("Error saving document:", error);
+        if (error.code === 'storage/unauthorized') {
+            return { success: false, error: "Save failed. You don't have permission to upload to this location. Please check your Firebase Storage security rules." };
+        }
         if (error.code === 'storage/unknown' || error.code === 'storage/object-not-found') {
              return { success: false, error: "Save failed. Have you enabled Cloud Storage in your Firebase project console? Go to the 'Storage' tab and click 'Get Started'." };
         }
