@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
-import { Camera, Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, ArrowLeft } from "lucide-react";
+import { Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,9 @@ import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 import { Textarea } from "../ui/textarea";
 
-type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving" | "camera_active";
+type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
 
 export function DocumentScanner() {
   const { user, isFirebaseEnabled } = useAuth();
@@ -25,68 +24,7 @@ export function DocumentScanner() {
   const [aiResult, setAiResult] = useState<GenerateSmartFilenameOutput | null>(null);
   const { toast } = useToast();
   
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // The play() call is essential for mobile browsers.
-        await videoRef.current.play();
-        setScannerState("camera_active");
-      }
-    } catch (err) {
-      console.error("Error accessing camera: ", err);
-      // Fallback for devices without a rear camera
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            await videoRef.current.play();
-            setScannerState("camera_active");
-        }
-      } catch (fallbackErr) {
-         console.error("Error accessing any camera: ", fallbackErr);
-         toast({
-            variant: "destructive",
-            title: "Camera Access Failed",
-            description: "Could not access any camera. Please check your browser permissions.",
-         });
-      }
-    }
-  };
-
-
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  const handleCapture = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext('2d');
-      if (context) {
-        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-        const dataUri = canvas.toDataURL('image/jpeg');
-        setImagePreview(dataUri);
-        setFileType('image');
-        setScannerState('capturing');
-        stopCamera();
-      }
-    }
-  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -113,18 +51,12 @@ export function DocumentScanner() {
   };
   
   const handleReset = () => {
-    stopCamera();
     setScannerState("idle");
     setImagePreview(null);
     setAiResult(null);
     setFileType(null);
   };
   
-  const handleBackToIdle = () => {
-    stopCamera();
-    setScannerState("idle");
-  }
-
   const handleAnalyze = async () => {
     if (!imagePreview) return;
     setScannerState("processing");
@@ -206,55 +138,20 @@ export function DocumentScanner() {
     }
     return <Image src={imagePreview} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
   }
-  
-  useEffect(() => {
-    // Cleanup function to stop the camera when the component unmounts
-    return () => {
-      stopCamera();
-    }
-  }, []);
-
-  if (scannerState === "camera_active") {
-    return (
-      <div className="fixed inset-0 bg-black z-50">
-        <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay muted />
-        <canvas ref={canvasRef} className="hidden" />
-        <div className="absolute inset-0 flex flex-col justify-between p-4">
-          <div className="flex justify-start">
-             <Button variant="ghost" onClick={handleBackToIdle} className="text-white bg-black/50 hover:bg-black/70">
-                <ArrowLeft className="mr-2"/> Back
-            </Button>
-          </div>
-          <div className="flex-grow flex items-center justify-center pointer-events-none">
-             <div className="w-full max-w-lg h-3/4 border-4 border-dashed border-white/50 rounded-lg" />
-          </div>
-          <div className="flex justify-center items-center pb-4">
-            <Button
-              onClick={handleCapture}
-              className="h-20 w-20 rounded-full border-4 border-white/50 bg-white/30 hover:bg-white/50 flex items-center justify-center"
-              aria-label="Capture image"
-            >
-              <Camera className="h-10 w-10 text-white" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
-            {scannerState === 'idle' && <Camera />}
+            {scannerState === 'idle' && <UploadCloud />}
             {scannerState === 'capturing' && <FileEdit />}
             {scannerState === 'processing' && <Loader2 className="animate-spin"/>}
             {scannerState === 'reviewing' && <Sparkles />}
             {scannerState === 'saving' && <Loader2 className="animate-spin"/>}
-            Hello {user?.displayName?.split(' ')[0] || 'there'}! Ready to scan?
+            Hello {user?.displayName?.split(' ')[0] || 'there'}! Ready to file?
         </CardTitle>
         <CardDescription>
-          {scannerState === 'idle' && 'Click the button below to scan or upload a document.'}
+          {scannerState === 'idle' && 'Click the button below to upload a document or take a photo.'}
           {scannerState === 'capturing' && 'Your document is ready. Let Lia work her magic!'}
           {scannerState === 'processing' && 'Lia is analyzing your document, please wait a moment...'}
           {scannerState === 'reviewing' && "Here's what Lia found. You can edit the details before saving."}
@@ -264,25 +161,19 @@ export function DocumentScanner() {
       <CardContent>
         {scannerState === "idle" && (
           <div className="text-center p-8 border-2 border-dashed rounded-lg space-y-4">
-            <Button size="lg" onClick={startCamera}>
-              <Camera className="mr-2 h-6 w-6" />
-              Scan Document
+            <Button size="lg" onClick={() => fileInputRef.current?.click()}>
+              <UploadCloud className="mr-2 h-6 w-6" />
+              Upload or Take Photo
             </Button>
-            <div>
-              <p className="text-sm text-muted-foreground my-2">or</p>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                Upload File
-              </Button>
-              <input
-                id="file-upload"
-                name="file-upload"
-                type="file"
-                className="sr-only"
-                accept="image/*,application/pdf"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-              />
-            </div>
+            <input
+              id="file-upload"
+              name="file-upload"
+              type="file"
+              className="sr-only"
+              accept="image/*,application/pdf"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
             <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs</p>
           </div>
         )}
@@ -339,7 +230,6 @@ export function DocumentScanner() {
                  {renderPreview()}
             </div>
         )}
-        <canvas ref={canvasRef} className="hidden" />
       </CardContent>
     </Card>
   );
