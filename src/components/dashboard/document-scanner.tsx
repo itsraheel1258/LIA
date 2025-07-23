@@ -36,17 +36,28 @@ export function DocumentScanner() {
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // The play() call is essential for mobile browsers.
         await videoRef.current.play();
         setScannerState("camera_active");
       }
     } catch (err) {
       console.error("Error accessing camera: ", err);
-      toast({
-        variant: "destructive",
-        title: "Camera Access Denied",
-        description:
-          "Please enable camera permissions in your browser settings to use this feature.",
-      });
+      // Fallback for devices without a rear camera
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+            setScannerState("camera_active");
+        }
+      } catch (fallbackErr) {
+         console.error("Error accessing any camera: ", fallbackErr);
+         toast({
+            variant: "destructive",
+            title: "Camera Access Failed",
+            description: "Could not access any camera. Please check your browser permissions.",
+         });
+      }
     }
   };
 
@@ -197,6 +208,7 @@ export function DocumentScanner() {
   }
   
   useEffect(() => {
+    // Cleanup function to stop the camera when the component unmounts
     return () => {
       stopCamera();
     }
@@ -206,6 +218,7 @@ export function DocumentScanner() {
     return (
       <div className="fixed inset-0 bg-black z-50">
         <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay muted />
+        <canvas ref={canvasRef} className="hidden" />
         <div className="absolute inset-0 flex flex-col justify-between p-4">
           <div className="flex justify-start">
              <Button variant="ghost" onClick={handleBackToIdle} className="text-white bg-black/50 hover:bg-black/70">
@@ -225,7 +238,6 @@ export function DocumentScanner() {
             </Button>
           </div>
         </div>
-        <canvas ref={canvasRef} className="hidden" />
       </div>
     );
   }
@@ -327,7 +339,7 @@ export function DocumentScanner() {
                  {renderPreview()}
             </div>
         )}
-
+        <canvas ref={canvasRef} className="hidden" />
       </CardContent>
     </Card>
   );
