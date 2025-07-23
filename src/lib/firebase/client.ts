@@ -1,3 +1,7 @@
+
+// This file is intended for CLIENT-SIDE use only.
+// It initializes Firebase for the browser environment.
+
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
@@ -9,8 +13,8 @@ let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
 
+// This check ensures Firebase is initialized only on the client side.
 if (typeof window !== "undefined" && firebaseConfig.apiKey) {
-    // This code will only run on the client side
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
@@ -19,6 +23,6 @@ if (typeof window !== "undefined" && firebaseConfig.apiKey) {
     console.error("Firebase API key is missing. Please add it to your .env.local file. The app will not function correctly without it.");
 }
 
-// We export the initialized services, which will be undefined on the server.
-// Components using these should also ensure they run only on the client.
+// We export the initialized services. They will be undefined on the server.
+// Components using these should ensure they only run on the client.
 export { app, auth, db, storage };

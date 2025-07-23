@@ -5,23 +5,8 @@ import { generateSmartFilename } from "@/ai/flows/generate-filename";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { revalidatePath } from "next/cache";
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { firebaseConfig } from "@/lib/firebase/config";
-
-// Helper function to initialize Firebase on the server
-function initializeServerApp() {
-    if (getApps().length === 0) {
-        if (!firebaseConfig.apiKey) {
-            throw new Error("Firebase API key is missing from .env.local. Server-side operations will fail.");
-        }
-        return initializeApp(firebaseConfig);
-    } else {
-        return getApp();
-    }
-}
-
+// Import the initialized server-side Firebase services
+import { db, storage } from "@/lib/firebase/server";
 
 export async function analyzeDocumentAction(dataUri: string) {
   try {
@@ -29,7 +14,6 @@ export async function analyzeDocumentAction(dataUri: string) {
     return { success: true, data: result };
   } catch (error: any) {
     console.error("Error analyzing document:", error);
-    // Pass the specific error message back to the client
     return { success: false, error: error.message || "Failed to analyze document." };
   }
 }
@@ -48,10 +32,6 @@ interface SaveDocumentInput {
 }
 
 export async function saveDocumentAction(input: SaveDocumentInput) {
-    const app = initializeServerApp();
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-
     if (!input.userId) {
         return { success: false, error: "Authentication error: User ID is missing." };
     }
@@ -60,11 +40,9 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         const storagePath = `documents/${input.userId}/${Date.now()}-${input.filename}`;
         const storageRef = ref(storage, storagePath);
         
-        // Upload image to Firebase Storage
         const uploadResult = await uploadString(storageRef, input.imageDataUri, 'data_url');
         const downloadUrl = await getDownloadURL(uploadResult.ref);
 
-        // Save metadata to Firestore
         await addDoc(collection(db, "documents"), {
             userId: input.userId,
             filename: input.filename,
