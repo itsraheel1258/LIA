@@ -36,7 +36,7 @@ export function DocumentScanner() {
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play(); // Explicitly play the video
+        await videoRef.current.play();
         setScannerState("camera_active");
       }
     } catch (err) {
@@ -202,12 +202,39 @@ export function DocumentScanner() {
     }
   }, []);
 
+  if (scannerState === "camera_active") {
+    return (
+      <div className="fixed inset-0 bg-black z-50">
+        <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay muted />
+        <div className="absolute inset-0 flex flex-col justify-between p-4">
+          <div className="flex justify-start">
+             <Button variant="ghost" onClick={handleBackToIdle} className="text-white bg-black/50 hover:bg-black/70">
+                <ArrowLeft className="mr-2"/> Back
+            </Button>
+          </div>
+          <div className="flex-grow flex items-center justify-center pointer-events-none">
+             <div className="w-full max-w-lg h-3/4 border-4 border-dashed border-white/50 rounded-lg" />
+          </div>
+          <div className="flex justify-center items-center pb-4">
+            <Button
+              onClick={handleCapture}
+              className="h-20 w-20 rounded-full border-4 border-white/50 bg-white/30 hover:bg-white/50 flex items-center justify-center"
+              aria-label="Capture image"
+            >
+              <Camera className="h-10 w-10 text-white" />
+            </Button>
+          </div>
+        </div>
+        <canvas ref={canvasRef} className="hidden" />
+      </div>
+    );
+  }
+
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
             {scannerState === 'idle' && <Camera />}
-            {scannerState === 'camera_active' && <Camera />}
             {scannerState === 'capturing' && <FileEdit />}
             {scannerState === 'processing' && <Loader2 className="animate-spin"/>}
             {scannerState === 'reviewing' && <Sparkles />}
@@ -216,7 +243,6 @@ export function DocumentScanner() {
         </CardTitle>
         <CardDescription>
           {scannerState === 'idle' && 'Click the button below to scan or upload a document.'}
-          {scannerState === 'camera_active' && 'Position the document within the frame and capture.'}
           {scannerState === 'capturing' && 'Your document is ready. Let Lia work her magic!'}
           {scannerState === 'processing' && 'Lia is analyzing your document, please wait a moment...'}
           {scannerState === 'reviewing' && "Here's what Lia found. You can edit the details before saving."}
@@ -246,26 +272,6 @@ export function DocumentScanner() {
               />
             </div>
             <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs</p>
-          </div>
-        )}
-
-        {scannerState === "camera_active" && (
-          <div className="relative space-y-4">
-              <video ref={videoRef} className="w-full rounded-lg" playsInline autoPlay muted />
-              <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-                  <div className="w-full h-full border-4 border-dashed border-primary/50 rounded-lg" />
-              </div>
-              <canvas ref={canvasRef} className="hidden" />
-              <div className="flex justify-between items-center">
-                  <Button variant="ghost" onClick={handleBackToIdle}><ArrowLeft className="mr-2"/> Back</Button>
-                  <Button
-                      onClick={handleCapture}
-                      className="rounded-full h-16 w-16 border-4 border-primary/30 bg-primary/20 hover:bg-primary/30"
-                  >
-                      <Camera className="h-8 w-8 text-primary" />
-                  </Button>
-                  <div className="w-20"></div>
-              </div>
           </div>
         )}
 
@@ -326,5 +332,3 @@ export function DocumentScanner() {
     </Card>
   );
 }
-
-    
