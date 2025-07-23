@@ -1,4 +1,4 @@
-import type { Timestamp } from "firebase/firestore";
+import type { Timestamp } from "firebase-admin/firestore";
 
 export interface Document {
   id: string;
@@ -13,5 +13,5 @@ export interface Document {
     category?: string;
     summary?: string;
   };
-  createdAt: Timestamp;
+  createdAt: Timestamp | Date;
 }

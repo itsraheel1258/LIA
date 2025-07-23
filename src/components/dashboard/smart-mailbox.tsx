@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase/client";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,7 +21,7 @@ export function SmartMailbox() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !isFirebaseEnabled) {
+    if (!user || !isFirebaseEnabled || !db) {
       setLoading(false);
       return;
     }
@@ -40,7 +40,8 @@ export function SmartMailbox() {
         docs.push({
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate() // Convert Firestore Timestamp to Date
+          // Convert Firestore Timestamp to Date for client-side use
+          createdAt: (data.createdAt as Timestamp)?.toDate() 
         } as DocumentType);
       });
       setDocuments(docs);
@@ -126,7 +127,7 @@ export function SmartMailbox() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                        {doc.createdAt ? format(doc.createdAt, "MMM d, yyyy") : '...'}
+                        {doc.createdAt ? format(doc.createdAt as Date, "MMM d, yyyy") : '...'}
                     </TableCell>
                   </TableRow>
                 ))}

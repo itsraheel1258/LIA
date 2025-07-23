@@ -1,29 +1,38 @@
-
 // This file is intended for SERVER-SIDE use only.
 // It initializes the Firebase Admin SDK to be used in server-side
 // functions (e.g., Next.js API routes, server actions).
+// It is crucial that this file is not imported into any client-side components.
 
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
-import { getStorage, FirebaseStorage } from "firebase/storage";
-import { firebaseConfig } from "./config";
+import "server-only";
 
-let app: FirebaseApp;
+import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getStorage, Storage } from 'firebase-admin/storage';
+import { getAuth, Auth } from 'firebase-admin/auth';
+import { firebaseAdminConfig } from "./config";
 
-// Check if the app is already initialized to prevent re-initialization on hot reloads
+let app: App;
+
+const serviceAccount = {
+    projectId: firebaseAdminConfig.projectId,
+    clientEmail: firebaseAdminConfig.clientEmail,
+    privateKey: firebaseAdminConfig.privateKey,
+}
+
 if (!getApps().length) {
-    if (!firebaseConfig.apiKey) {
-        // This error will be visible in the server logs if the config is missing.
-        throw new Error("Firebase API key is missing. Please check your .env.local file.");
+    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+        throw new Error("Firebase Admin SDK configuration is missing. Please check your .env file.");
     }
-    app = initializeApp(firebaseConfig);
+    app = initializeApp({
+        credential: cert(serviceAccount),
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    });
 } else {
     app = getApp();
 }
 
-const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app);
-const storage: FirebaseStorage = getStorage(app);
+const adminAuth: Auth = getAuth(app);
+const adminDb: Firestore = getFirestore(app);
+const adminStorage: Storage = getStorage(app);
 
-export { app, auth, db, storage };
+export { adminAuth, adminDb, adminStorage };

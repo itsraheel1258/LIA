@@ -23,8 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // This check ensures we only try to use Firebase on the client side
-    // where it has been initialized.
+    // auth will be null on the server and non-null on the client if configured.
     if (auth) {
       setIsFirebaseEnabled(true);
       const unsubscribe = onAuthStateChanged(auth, (user) => {

@@ -2,11 +2,9 @@
 "use server";
 
 import { generateSmartFilename } from "@/ai/flows/generate-filename";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { revalidatePath } from "next/cache";
-// Import the initialized server-side Firebase services
-import { db, storage } from "@/lib/firebase/server";
+// Import the initialized server-side Admin Firebase services
+import { adminDb, adminStorage } from "@/lib/firebase/server";
 
 export async function analyzeDocumentAction(dataUri: string) {
   try {
@@ -37,13 +35,24 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
     }
 
     try {
+        const bucket = adminStorage.bucket();
         const storagePath = `documents/${input.userId}/${Date.now()}-${input.filename}`;
-        const storageRef = ref(storage, storagePath);
         
-        const uploadResult = await uploadString(storageRef, input.imageDataUri, 'data_url');
-        const downloadUrl = await getDownloadURL(uploadResult.ref);
+        // Remove the data URI prefix for upload
+        const base64Data = input.imageDataUri.split(',')[1];
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        const file = bucket.file(storagePath);
+        await file.save(imageBuffer, {
+            metadata: {
+                contentType: input.imageDataUri.split(',')[0].split(':')[1].split(';')[0],
+            },
+        });
+        
+        // Make the file public to get a download URL
+        await file.makePublic();
+        const downloadUrl = file.publicUrl();
 
-        await addDoc(collection(db, "documents"), {
+        await adminDb.collection("documents").add({
             userId: input.userId,
             filename: input.filename,
             tags: input.tags,
@@ -53,15 +62,15 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
                 ...input.metadata,
                 summary: input.summary,
             },
-            createdAt: serverTimestamp(),
+            createdAt: new Date(), // Use server-side timestamp
         });
 
         revalidatePath("/dashboard");
         return { success: true };
     } catch (error: any) {
         console.error("Error saving document:", error);
-        if (error.code === 'storage/unauthorized') {
-            return { success: false, error: "Save failed. You don't have permission to upload to this location. Please check your Firebase Storage security rules." };
+        if (error.code === 'storage/unauthorized' || error.code === 7) {
+            return { success: false, error: "Save failed. You don't have permission to upload to this location. Please check your Firebase Storage security rules and Admin SDK setup." };
         }
         if (error.code === 'storage/unknown' || error.code === 'storage/object-not-found') {
              return { success: false, error: "Save failed. Have you enabled Cloud Storage in your Firebase project console? Go to the 'Storage' tab and click 'Get Started'." };
