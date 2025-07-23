@@ -23,6 +23,7 @@ export type GenerateSmartFilenameInput = z.infer<typeof GenerateSmartFilenameInp
 const GenerateSmartFilenameOutputSchema = z.object({
   filename: z.string().describe('A smart, human-readable filename for the document.'),
   summary: z.string().describe('A concise, one to two-sentence summary of the document.'),
+  folderPath: z.string().describe('Suggested folder path for the document (e.g., "Finance/Banking").'),
   folderTags: z.array(z.string()).describe('Suggested folder tags for the document.'),
   metadata: z.object({
     sender: z.string().optional().describe('The sender of the document, if identifiable.'),
@@ -46,6 +47,7 @@ Analyze the document in the image provided. Based on the document's content, gen
 - A descriptive filename (e.g., "Bank Statement - Chase - June 2024").
 - A concise, one to two-sentence summary of the document's content.
 - A list of folder tags for organization (e.g., ["Finance", "Banking"]).
+- A hierarchical folder path based on the tags (e.g., "Finance/Banking").
 - Extract any available metadata (sender, date, category).
 
 Here is the document image: {{media url=photoDataUri}}
@@ -65,9 +67,12 @@ const generateSmartFilenameFlow = ai.defineFlow(
     if (!output) {
       throw new Error('Failed to get a response from the AI model.');
     }
-    // A fallback in case the model doesn't generate tags
+    // A fallback in case the model doesn't generate tags or path
     if (!output.folderTags || output.folderTags.length === 0) {
       output.folderTags = ['Uncategorized'];
+    }
+    if (!output.folderPath) {
+        output.folderPath = output.folderTags.join(' / ');
     }
     return output;
   }

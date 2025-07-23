@@ -55,6 +55,9 @@ export function DocumentScanner() {
     setImagePreview(null);
     setAiResult(null);
     setFileType(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
   
   const handleAnalyze = async () => {
@@ -91,7 +94,8 @@ export function DocumentScanner() {
     const formData = new FormData(event.currentTarget);
     const filename = formData.get('filename') as string;
     const summary = formData.get('summary') as string;
-    const tags = aiResult.folderTags;
+    const folderPath = formData.get('folderPath') as string;
+    const tags = folderPath.split('/').map(t => t.trim()).filter(Boolean);
     
     if (!isFirebaseEnabled) {
         toast({
@@ -151,7 +155,7 @@ export function DocumentScanner() {
             Hello {user?.displayName?.split(' ')[0] || 'there'}! Ready to file?
         </CardTitle>
         <CardDescription>
-          {scannerState === 'idle' && 'Click the button below to upload a document or take a photo.'}
+          {scannerState === 'idle' && 'Click the button below to upload a document.'}
           {scannerState === 'capturing' && 'Your document is ready. Let Lia work her magic!'}
           {scannerState === 'processing' && 'Lia is analyzing your document, please wait a moment...'}
           {scannerState === 'reviewing' && "Here's what Lia found. You can edit the details before saving."}
@@ -161,9 +165,9 @@ export function DocumentScanner() {
       <CardContent>
         {scannerState === "idle" && (
           <div className="text-center p-8 border-2 border-dashed rounded-lg space-y-4">
-            <Button size="lg" onClick={() => fileInputRef.current?.click()}>
+            <Button size="lg" onClick={() => fileInputRef.current?.click()} className="font-headline">
               <UploadCloud className="mr-2 h-6 w-6" />
-              Upload or Take Photo
+              Upload File
             </Button>
             <input
               id="file-upload"
@@ -174,7 +178,7 @@ export function DocumentScanner() {
               ref={fileInputRef}
               onChange={handleFileChange}
             />
-            <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs</p>
+            <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs. You can also take a photo.</p>
           </div>
         )}
 
@@ -205,10 +209,9 @@ export function DocumentScanner() {
                         <Textarea id="summary" name="summary" defaultValue={aiResult.summary} rows={3} />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-2">Suggested Tags</label>
-                        <div className="flex flex-wrap gap-2">
-                        {aiResult.folderTags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-                        </div>
+                        <label htmlFor="folderPath" className="block text-sm font-medium text-muted-foreground mb-1">Folder Path</label>
+                        <Input id="folderPath" name="folderPath" defaultValue={aiResult.folderPath} />
+                        <p className="text-xs text-muted-foreground mt-1">Use ' / ' to create nested folders.</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         {aiResult.metadata.sender && <p><strong className="text-muted-foreground">Sender:</strong> {aiResult.metadata.sender}</p>}
