@@ -2,6 +2,7 @@
 "use server";
 
 import { generateSmartFilename } from "@/ai/flows/generate-filename";
+import { summarizeText } from "@/ai/flows/summarize-text";
 import { cropDocument } from "@/ai/flows/crop-document";
 import { extractText } from "@/ai/flows/extract-text";
 import { revalidatePath } from "next/cache";
@@ -17,21 +18,9 @@ export async function analyzeDocumentAction(dataUri: string, fileType: "image" |
       croppedDataUri = await cropDocument({ photoDataUri: dataUri });
       analysisResult = await generateSmartFilename({ photoDataUri: croppedDataUri });
     } else {
-      // For PDFs, we extract text and then generate the filename
+      // For PDFs, extract text and then generate the filename from the text.
       const textContent = await extractText({ dataUri });
-      // This is a placeholder for a flow that would analyze text from a PDF.
-      // For now, we'll use a simplified version of the generateSmartFilename flow's logic.
-      // In a real scenario, you might have a different prompt or model for text.
-      analysisResult = {
-          filename: `PDF Document - ${new Date().toLocaleDateString()}.pdf`,
-          summary: "This is a PDF document.",
-          folderPath: "PDFs",
-          folderTags: ["PDF"],
-          metadata: {
-            date: new Date().toISOString().split('T')[0],
-            category: 'PDF'
-          }
-      };
+      analysisResult = await summarizeText({ textContent });
     }
 
     return { success: true, data: { ...analysisResult, croppedDataUri } };
