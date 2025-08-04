@@ -13,7 +13,8 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 // Using the same output schema as generate-filename for consistency
-import { GenerateSmartFilenameOutput as SummarizeTextOutput, GenerateSmartFilenameOutput } from './generate-filename';
+import { GenerateSmartFilenameOutputSchema } from './generate-filename';
+import type { GenerateSmartFilenameOutput as SummarizeTextOutput } from './generate-filename';
 export type { SummarizeTextOutput };
 
 
@@ -30,7 +31,7 @@ export async function summarizeText(input: SummarizeTextInput): Promise<Summariz
 const summarizeTextPrompt = ai.definePrompt({
   name: 'summarizeTextPrompt',
   input: {schema: SummarizeTextInputSchema},
-  output: {schema: GenerateSmartFilenameOutput},
+  output: {schema: GenerateSmartFilenameOutputSchema},
   prompt: `You are an AI assistant that analyzes document text and generates smart, human-readable filenames and metadata.
 
 Analyze the document text provided below. Based on the document's content, generate the following:
@@ -53,7 +54,7 @@ const summarizeTextFlow = ai.defineFlow(
   {
     name: 'summarizeTextFlow',
     inputSchema: SummarizeTextInputSchema,
-    outputSchema: GenerateSmartFilenameOutput,
+    outputSchema: GenerateSmartFilenameOutputSchema,
   },
   async input => {
     const {output} = await summarizeTextPrompt(input);

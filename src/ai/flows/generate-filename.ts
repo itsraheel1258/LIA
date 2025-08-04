@@ -21,7 +21,7 @@ const GenerateSmartFilenameInputSchema = z.object({
 });
 export type GenerateSmartFilenameInput = z.infer<typeof GenerateSmartFilenameInputSchema>;
 
-const GenerateSmartFilenameOutputSchema = z.object({
+export const GenerateSmartFilenameOutputSchema = z.object({
   filename: z.string().describe('A smart, human-readable filename for the document.'),
   summary: z.string().describe('A concise, one to two-sentence summary of the document.'),
   folderPath: z.string().describe('Suggested folder path for the document (e.g., "Finance/Banking").'),
