@@ -26,6 +26,10 @@ export default function Home() {
 
   const handleSignIn = async () => {
     if (!isFirebaseEnabled) return;
+    if (user) {
+        router.push("/dashboard");
+        return;
+    }
     try {
       console.log("Start Google SignIn Process")
       await signInWithGoogle();
@@ -128,7 +132,7 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <Button variant="outline" className="w-full font-headline">Get Started</Button>
+                  <Button variant="outline" className="w-full font-headline" onClick={handleSignIn} disabled={!isFirebaseEnabled || loading}>Get Started</Button>
                 </CardFooter>
               </Card>
               <Card className="border-primary shadow-lg">
@@ -160,7 +164,7 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full font-headline">Start 30-Day Free Trial</Button>
+                  <Button className="w-full font-headline" onClick={handleSignIn} disabled={!isFirebaseEnabled || loading}>Start 30-Day Free Trial</Button>
                 </CardFooter>
               </Card>
             </div>
