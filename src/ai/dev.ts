@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/generate-filename.ts';
 import '@/ai/flows/suggest-tags.ts';
+import '@/ai/flows/crop-document.ts';

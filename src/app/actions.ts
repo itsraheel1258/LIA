@@ -2,14 +2,16 @@
 "use server";
 
 import { generateSmartFilename } from "@/ai/flows/generate-filename";
+import { cropDocument } from "@/ai/flows/crop-document";
 import { revalidatePath } from "next/cache";
 // Import the initialized server-side Admin Firebase services
 import { adminDb, adminStorage } from "@/lib/firebase/server";
 
-export async function analyzeDocumentAction(dataUri: string) {
+export async function cropAndAnalyzeDocumentAction(dataUri: string) {
   try {
-    const result = await generateSmartFilename({ photoDataUri: dataUri });
-    return { success: true, data: result };
+    const croppedDataUri = await cropDocument({ photoDataUri: dataUri });
+    const result = await generateSmartFilename({ photoDataUri: croppedDataUri });
+    return { success: true, data: { ...result, croppedDataUri } };
   } catch (error: any) {
     console.error("Error analyzing document:", error);
     return { success: false, error: error.message || "Failed to analyze document." };
