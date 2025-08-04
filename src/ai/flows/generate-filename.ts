@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -26,7 +27,7 @@ const GenerateSmartFilenameOutputSchema = z.object({
   folderPath: z.string().describe('Suggested folder path for the document (e.g., "Finance/Banking").'),
   folderTags: z.array(z.string()).describe('Suggested folder tags for the document.'),
   metadata: z.object({
-    sender: z.string().optional().describe('The sender of the document, if identifiable.'),
+    sender: z.string().optional().describe('The sender of the document (name and email only), if identifiable.'),
     date: z.string().optional().describe('The date of the document, if identifiable.'),
     category: z.string().optional().describe('The category of the document.'),
   }),
@@ -48,7 +49,7 @@ Analyze the document in the image provided. Based on the document's content, gen
 - A concise, one to two-sentence summary of the document's content.
 - A list of folder tags for organization (e.g., ["Finance", "Banking"]).
 - A hierarchical folder path based on the tags (e.g., "Finance/Banking").
-- Extract any available metadata (sender, date, category).
+- Extract any available metadata. For the sender, extract ONLY the name and email address, not the surrounding text.
 
 Here is the document image: {{media url=photoDataUri}}
 
