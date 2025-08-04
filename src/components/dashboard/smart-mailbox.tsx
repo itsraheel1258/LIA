@@ -1,24 +1,22 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import Link from "next/link";
-import { Badge } from "../ui/badge";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
-interface Folder {
+interface TreeNode {
   name: string;
   path: string;
-  count: number;
-  children: Record<string, Folder>;
+  children: Record<string, TreeNode>;
   documents: DocumentType[];
 }
 
@@ -26,6 +24,7 @@ export function SmartMailbox() {
   const { user, isFirebaseEnabled, db } = useAuth();
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPath, setSelectedPath] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user || !isFirebaseEnabled || !db) {
@@ -47,7 +46,6 @@ export function SmartMailbox() {
         docs.push({
           id: doc.id,
           ...data,
-          // Convert Firestore Timestamp to Date for client-side use
           createdAt: (data.createdAt as Timestamp)?.toDate() 
         } as DocumentType);
       });
@@ -62,21 +60,18 @@ export function SmartMailbox() {
   }, [user, isFirebaseEnabled, db]);
   
   const folderTree = useMemo(() => {
-    const root: Folder = { name: "Root", path: "", count: 0, children: {}, documents: [] };
+    const root: TreeNode = { name: "Root", path: "", children: {}, documents: [] };
 
     documents.forEach(doc => {
-      // Reconstruct folder path from tags for grouping.
-      // Assumes tags are ordered hierarchically.
-      const path = doc.tags.join(' / ') || "Uncategorized";
-      const pathParts = path.split(' / ');
+      const path = doc.tags.join('/') || "Uncategorized";
+      const pathParts = path.split('/').map(p => p.trim());
       let currentNode = root;
 
       pathParts.forEach((part, index) => {
         if (!currentNode.children[part]) {
           currentNode.children[part] = {
             name: part,
-            path: pathParts.slice(0, index + 1).join(' / '),
-            count: 0,
+            path: pathParts.slice(0, index + 1).join('/'),
             children: {},
             documents: []
           };
@@ -86,55 +81,47 @@ export function SmartMailbox() {
       
       currentNode.documents.push(doc);
     });
-
-    // Recursively count documents
-    const countDocs = (node: Folder): number => {
-        let count = node.documents.length;
-        Object.values(node.children).forEach(child => {
-            count += countDocs(child);
-        });
-        node.count = count;
-        return count;
-    };
-    countDocs(root);
     
-    return root.children;
+    return root;
   }, [documents]);
 
-
-  const renderFolders = (folders: Record<string, Folder>) => {
-    return (
-        <Accordion type="multiple" className="w-full">
-            {Object.values(folders).map(folder => (
-                <AccordionItem value={folder.path} key={folder.path}>
-                    <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-4">
-                            <Folder className="h-6 w-6 text-primary" />
-                            <span className="text-lg font-medium">{folder.name}</span>
-                             <Badge variant="secondary">{folder.count}</Badge>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pl-6">
-                        {Object.keys(folder.children).length > 0 && renderFolders(folder.children)}
-                        {folder.documents.length > 0 && (
-                            <ul className="space-y-2 pt-2">
-                                {folder.documents.map(doc => (
-                                    <li key={doc.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
-                                      <Link href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
-                                         <FileText className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-                                         <span className="group-hover:underline">{doc.filename}</span>
-                                      </Link>
-                                      <span className="text-sm text-muted-foreground">{doc.createdAt ? format(doc.createdAt as Date, "MMM d, yyyy") : '...'}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </AccordionContent>
-                </AccordionItem>
-            ))}
-        </Accordion>
-    );
+  const handleSelect = (path: string) => {
+    setSelectedPath(path ? path.split('/') : []);
   };
+  
+  const getNodeFromPath = useCallback((path: string[], tree: TreeNode): TreeNode | null => {
+    if (path.length === 0) return tree;
+    let currentNode = tree;
+    for (const part of path) {
+      if (currentNode.children[part]) {
+        currentNode = currentNode.children[part];
+      } else {
+        return null;
+      }
+    }
+    return currentNode;
+  }, []);
+
+  const columns = useMemo(() => {
+    const cols: (TreeNode | DocumentType)[][] = [];
+    let currentNode = folderTree;
+    
+    // First column is always the root's children
+    cols.push(Object.values(currentNode.children));
+
+    // Subsequent columns based on selected path
+    for (let i = 0; i < selectedPath.length; i++) {
+        const node = getNodeFromPath(selectedPath.slice(0, i + 1), folderTree);
+        if (node) {
+             const children = Object.values(node.children);
+             const docs = node.documents;
+             if (children.length > 0 || docs.length > 0) {
+                 cols.push([...children, ...docs]);
+             }
+        }
+    }
+    return cols;
+  }, [selectedPath, folderTree, getNodeFromPath]);
 
   if (!isFirebaseEnabled) {
     return (
@@ -155,24 +142,73 @@ export function SmartMailbox() {
       return (
         <div>
             <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
-             <div className="space-y-2">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-            </div>
+             <Card className="h-[400px]">
+                <CardContent className="p-0 h-full">
+                    <div className="flex h-full">
+                        <div className="w-1/3 border-r p-2 space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>
+                        <div className="w-1/3 border-r p-2"><Skeleton className="h-8 w-full" /></div>
+                        <div className="w-1/3 p-2"></div>
+                    </div>
+                </CardContent>
+             </Card>
         </div>
       )
   }
+  
+  const isNode = (item: any): item is TreeNode => 'children' in item;
 
   return (
     <div>
       <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
-      <Card>
-        <CardContent className="p-4">
+      <Card className="h-[400px] bg-card text-card-foreground">
+        <CardContent className="p-0 h-full overflow-hidden">
           {documents.length > 0 ? (
-            renderFolders(folderTree)
+            <div className="flex h-full w-full overflow-x-auto">
+                {columns.map((columnItems, colIndex) => (
+                    <div key={colIndex} className="flex-shrink-0 w-64 border-r border-border last:border-r-0">
+                         <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
+                             {columnItems.map((item, itemIndex) => {
+                                 const currentItemPath = isNode(item) ? item.path : [...selectedPath, item.filename].join('/');
+                                 const isSelected = selectedPath[colIndex] === item.name;
+
+                                 return (
+                                     <li key={itemIndex}>
+                                        {isNode(item) ? (
+                                            <button
+                                                onClick={() => handleSelect(item.path)}
+                                                className={cn(
+                                                    "w-full text-left flex items-center justify-between p-2 rounded-md text-sm",
+                                                    isSelected ? "bg-primary/80 text-primary-foreground" : "hover:bg-muted/50"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Folder className="h-5 w-5" />
+                                                    <span className="truncate">{item.name}</span>
+                                                </div>
+                                                <ChevronRight className="h-4 w-4 text-muted-foreground"/>
+                                            </button>
+                                        ) : (
+                                            <Link 
+                                              href={item.downloadUrl} 
+                                              target="_blank" 
+                                              rel="noopener noreferrer" 
+                                              className="w-full text-left flex items-center justify-between p-2 rounded-md text-sm hover:bg-muted/50"
+                                            >
+                                               <div className="flex items-center gap-2">
+                                                    <FileText className="h-5 w-5" />
+                                                    <span className="truncate">{item.filename}</span>
+                                                </div>
+                                            </Link>
+                                        )}
+                                     </li>
+                                 );
+                             })}
+                         </ul>
+                    </div>
+                ))}
+            </div>
           ) : (
-            <div className="text-center p-12">
+            <div className="flex flex-col items-center justify-center h-full text-center p-12">
                 <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-2 text-lg font-medium font-headline">Your mailbox is empty</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
