@@ -7,7 +7,7 @@ import { Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, UploadClo
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { cropAndAnalyzeDocumentAction, saveDocumentAction } from "@/app/actions";
+import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -65,33 +65,20 @@ export function DocumentScanner() {
   };
   
   const handleAnalyze = async () => {
-    if (!imagePreview) return;
+    if (!imagePreview || !fileType) return;
     setScannerState("processing");
     try {
-      // We can only crop images, not PDFs.
-      if (fileType === 'image') {
-        const result = await cropAndAnalyzeDocumentAction(imagePreview);
-        if (result.success && result.data) {
-          setAiResult(result.data);
-          setScannerState("reviewing");
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Analysis Failed",
-            description: result.error || "Lia could not understand this document. Please check your Gemini API key.",
-          });
-          setScannerState("capturing");
-        }
+      const result = await analyzeDocumentAction(imagePreview, fileType);
+      if (result.success && result.data) {
+        setAiResult(result.data);
+        setScannerState("reviewing");
       } else {
-         // Handle PDF logic here if needed, for now it will just skip to analysis.
-         // This is a placeholder for a flow that would handle PDFs
-         toast({
-           title: "PDF Processing",
-           description: "Directly analyzing PDF without cropping."
-         })
-         // You would call a different action here for PDFs
-         // For now, we just go back to capturing state.
-         setScannerState('capturing');
+        toast({
+          variant: "destructive",
+          title: "Analysis Failed",
+          description: result.error || "Lia could not understand this document. Please check your Gemini API key.",
+        });
+        setScannerState("capturing");
       }
     } catch (error: any) {
        toast({
@@ -125,7 +112,7 @@ export function DocumentScanner() {
     
     const result = await saveDocumentAction({
         userId: user.uid,
-        imageDataUri: aiResult.croppedDataUri, // Save the cropped image
+        imageDataUri: aiResult.croppedDataUri, // Save the cropped image or original PDF
         filename,
         tags,
         summary,
@@ -149,15 +136,24 @@ export function DocumentScanner() {
   };
 
   const renderPreview = () => {
-    const src = (scannerState === 'reviewing' || scannerState === 'saving') && aiResult ? aiResult.croppedDataUri : imagePreview;
+    const src = (scannerState === 'reviewing' || scannerState === 'saving') && aiResult?.croppedDataUri ? aiResult.croppedDataUri : imagePreview;
     if (!src) return null;
-    if (fileType === 'pdf') {
+    if (fileType === 'pdf' && scannerState !== 'reviewing') {
       return (
         <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
           <FileText className="h-24 w-24 text-primary" />
           <p className="mt-4 text-sm text-muted-foreground">PDF Document Ready for Analysis</p>
         </div>
       );
+    }
+    // For PDFs in review state, we want to show a generic icon, since we don't have a preview.
+    if (fileType === 'pdf') {
+         return (
+            <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
+                <FileText className="h-24 w-24 text-primary" />
+                <p className="mt-4 text-sm text-muted-foreground">PDF Document</p>
+            </div>
+        );
     }
     return <Image src={src} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
   }

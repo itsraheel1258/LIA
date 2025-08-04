@@ -3,15 +3,38 @@
 
 import { generateSmartFilename } from "@/ai/flows/generate-filename";
 import { cropDocument } from "@/ai/flows/crop-document";
+import { extractText } from "@/ai/flows/extract-text";
 import { revalidatePath } from "next/cache";
 // Import the initialized server-side Admin Firebase services
 import { adminDb, adminStorage } from "@/lib/firebase/server";
 
-export async function cropAndAnalyzeDocumentAction(dataUri: string) {
+export async function analyzeDocumentAction(dataUri: string, fileType: "image" | "pdf") {
   try {
-    const croppedDataUri = await cropDocument({ photoDataUri: dataUri });
-    const result = await generateSmartFilename({ photoDataUri: croppedDataUri });
-    return { success: true, data: { ...result, croppedDataUri } };
+    let analysisResult;
+    let croppedDataUri = dataUri;
+
+    if (fileType === 'image') {
+      croppedDataUri = await cropDocument({ photoDataUri: dataUri });
+      analysisResult = await generateSmartFilename({ photoDataUri: croppedDataUri });
+    } else {
+      // For PDFs, we extract text and then generate the filename
+      const textContent = await extractText({ dataUri });
+      // This is a placeholder for a flow that would analyze text from a PDF.
+      // For now, we'll use a simplified version of the generateSmartFilename flow's logic.
+      // In a real scenario, you might have a different prompt or model for text.
+      analysisResult = {
+          filename: `PDF Document - ${new Date().toLocaleDateString()}.pdf`,
+          summary: "This is a PDF document.",
+          folderPath: "PDFs",
+          folderTags: ["PDF"],
+          metadata: {
+            date: new Date().toISOString().split('T')[0],
+            category: 'PDF'
+          }
+      };
+    }
+
+    return { success: true, data: { ...analysisResult, croppedDataUri } };
   } catch (error: any) {
     console.error("Error analyzing document:", error);
     return { success: false, error: error.message || "Failed to analyze document." };
@@ -44,9 +67,12 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         const base64Data = input.imageDataUri.split(',')[1];
         const imageBuffer = Buffer.from(base64Data, 'base64');
         const file = bucket.file(storagePath);
+
+        const contentType = input.imageDataUri.split(',')[0].split(':')[1].split(';')[0];
+
         await file.save(imageBuffer, {
             metadata: {
-                contentType: input.imageDataUri.split(',')[0].split(':')[1].split(';')[0],
+                contentType: contentType,
             },
         });
         
@@ -68,7 +94,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         });
 
         revalidatePath("/dashboard");
-        return { success: true };
+        return { success: true, downloadUrl };
     } catch (error: any) {
         console.error("Error saving document:", error);
         if (error.code === 'storage/unauthorized' || error.code === 7) {
