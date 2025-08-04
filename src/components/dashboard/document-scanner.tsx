@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, UploadCloud, Crop } from "lucide-react";
+import { Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, UploadCloud, Copy, FilePlus2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "../ui/textarea";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+
 
 type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
 type AiResult = GenerateSmartFilenameOutput & { croppedDataUri: string };
@@ -19,7 +21,7 @@ type AiResult = GenerateSmartFilenameOutput & { croppedDataUri: string };
 export function DocumentScanner() {
   const { user, isFirebaseEnabled } = useAuth();
   const [scannerState, setScannerState] = useState<ScannerState>("idle");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const { toast } = useToast();
@@ -27,16 +29,45 @@ export function DocumentScanner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith('image/')) {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      // For simplicity, we'll handle multiple files only for images.
+      // PDFs are often multi-page already.
+      if (files[0].type.startsWith('image/')) {
+        if (files.length > 1) {
+            toast({ title: `${files.length} pages ready to be processed.`});
+        }
         setFileType('image');
-      } else if (file.type === 'application/pdf') {
+        const fileReaders = Array.from(files).map(file => {
+            return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        });
+        Promise.all(fileReaders).then(newPreviews => {
+            setImagePreviews(previews => [...previews, ...newPreviews]);
+            setScannerState("capturing");
+        });
+
+      } else if (files[0].type === 'application/pdf') {
+        if (imagePreviews.length > 0 || files.length > 1) {
+            toast({ variant: 'destructive', title: 'Mixing file types is not allowed.'});
+            return;
+        }
         setFileType('pdf');
         toast({
           title: 'PDFs cannot be cropped',
           description: 'PDF processing will skip the AI cropping step.',
         });
+         const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreviews([reader.result as string]);
+            setScannerState("capturing");
+          };
+          reader.readAsDataURL(files[0]);
+
       } else {
         toast({
           variant: 'destructive',
@@ -45,30 +76,69 @@ export function DocumentScanner() {
         });
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-        setScannerState("capturing");
-      };
-      reader.readAsDataURL(file);
     }
   };
   
   const handleReset = () => {
     setScannerState("idle");
-    setImagePreview(null);
+    setImagePreviews([]);
     setAiResult(null);
     setFileType(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
+
+  const stitchImages = async (imageSrcs: string[]): Promise<string> => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not get canvas context');
+
+        const images = await Promise.all(imageSrcs.map(src => new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new window.Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        })));
+
+        const totalHeight = images.reduce((sum, img) => sum + img.height, 0);
+        const maxWidth = Math.max(...images.map(img => img.width));
+
+        canvas.width = maxWidth;
+        canvas.height = totalHeight;
+
+        let y = 0;
+        for (const img of images) {
+            ctx.drawImage(img, 0, y);
+            y += img.height;
+        }
+
+        return canvas.toDataURL('image/jpeg'); // Or 'image/png'
+    };
   
   const handleAnalyze = async () => {
-    if (!imagePreview || !fileType) return;
+    if (imagePreviews.length === 0 || !fileType) return;
     setScannerState("processing");
+    
+    let dataUriToAnalyze = imagePreviews[0];
+    
+    // If we have multiple images, stitch them together before analyzing.
+    if (fileType === 'image' && imagePreviews.length > 1) {
+        try {
+            dataUriToAnalyze = await stitchImages(imagePreviews);
+        } catch (error) {
+             toast({
+                variant: "destructive",
+                title: "Image Stitching Failed",
+                description: "Could not combine pages. Please try again.",
+            });
+            setScannerState("capturing");
+            return;
+        }
+    }
+
     try {
-      const result = await analyzeDocumentAction(imagePreview, fileType);
+      const result = await analyzeDocumentAction(dataUriToAnalyze, fileType);
       if (result.success && result.data) {
         setAiResult(result.data as AiResult);
         setScannerState("reviewing");
@@ -134,10 +204,12 @@ export function DocumentScanner() {
       setScannerState("reviewing");
     }
   };
+  
+  const openFilePicker = () => fileInputRef.current?.click();
 
   const renderPreview = () => {
-    const src = (scannerState === 'reviewing' || scannerState === 'saving') && aiResult?.croppedDataUri ? aiResult.croppedDataUri : imagePreview;
-    if (!src) return null;
+    const src = (scannerState === 'reviewing' || scannerState === 'saving') && aiResult?.croppedDataUri ? [aiResult.croppedDataUri] : imagePreviews;
+    if (src.length === 0) return null;
     if (fileType === 'pdf' && scannerState !== 'reviewing') {
       return (
         <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
@@ -146,7 +218,6 @@ export function DocumentScanner() {
         </div>
       );
     }
-    // For PDFs in review state, we want to show a generic icon, since we don't have a preview.
     if (fileType === 'pdf') {
          return (
             <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
@@ -155,7 +226,22 @@ export function DocumentScanner() {
             </div>
         );
     }
-    return <Image src={src} alt="Document preview" width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
+    return (
+        <Carousel className="w-full">
+            <CarouselContent>
+                {src.map((s, i) => (
+                    <CarouselItem key={i}>
+                         <Image src={s} alt={`Document page ${i+1}`} width={400} height={500} className="rounded-lg w-full object-contain max-h-[400px]" />
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            {src.length > 1 && <>
+                <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2" />
+                <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2" />
+            </>
+            }
+        </Carousel>
+    )
   }
 
   const getCardTitle = () => {
@@ -172,7 +258,10 @@ export function DocumentScanner() {
    const getCardDescription = () => {
     switch(scannerState) {
         case 'idle': return 'Click the button below to upload a document.';
-        case 'capturing': return 'Your document is ready. Let Lia work her magic!';
+        case 'capturing': {
+            if (fileType === 'pdf') return 'Your PDF is ready. Let Lia work her magic!';
+            return `${imagePreviews.length} page(s) loaded. Add more pages or let Lia work her magic!`;
+        }
         case 'processing': return 'First, Lia will crop and enhance the image, then analyze its content.';
         case 'reviewing': return "Review the details below or edit them before saving.";
         case 'saving': return 'Filing your document securely in the Smart Mailbox...';
@@ -192,9 +281,9 @@ export function DocumentScanner() {
       <CardContent>
         {scannerState === "idle" && (
           <div className="text-center p-8 border-2 border-dashed rounded-lg space-y-4">
-             <Button size="lg" onClick={() => fileInputRef.current?.click()} className="font-headline">
+             <Button size="lg" onClick={openFilePicker} className="font-headline">
               <UploadCloud className="mr-2 h-6 w-6" />
-              Upload File
+              Upload File(s)
             </Button>
             <input
               id="file-upload"
@@ -204,20 +293,24 @@ export function DocumentScanner() {
               accept="image/*,application/pdf"
               ref={fileInputRef}
               onChange={handleFileChange}
+              multiple={true}
             />
-             <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs. You can also take a photo.</p>
+             <p className="mt-1 text-xs text-muted-foreground">Accepts images and PDFs. You can also take photos.</p>
           </div>
         )}
 
-        {(scannerState === "capturing" || scannerState === "processing") && imagePreview && (
+        {(scannerState === "capturing" || scannerState === "processing") && imagePreviews.length > 0 && (
           <div className="space-y-4">
             {renderPreview()}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleReset} disabled={scannerState === 'processing'}> <XCircle className="mr-2 h-4 w-4"/> Cancel</Button>
-              <Button onClick={handleAnalyze} disabled={scannerState === 'processing'}>
-                {scannerState === 'processing' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
-                Process with Lia
-              </Button>
+            <div className="flex justify-between items-center gap-2">
+                 <div className="flex gap-2">
+                    {fileType === 'image' && <Button variant="secondary" onClick={openFilePicker} disabled={scannerState === 'processing'}><FilePlus2 /> Add Pages</Button>}
+                    <Button variant="outline" onClick={handleReset} disabled={scannerState === 'processing'}> <XCircle /> Cancel</Button>
+                 </div>
+                 <Button onClick={handleAnalyze} disabled={scannerState === 'processing'}>
+                    {scannerState === 'processing' ? <Loader2 className="animate-spin"/> : <Sparkles />}
+                    Process with Lia
+                </Button>
             </div>
           </div>
         )}
@@ -247,8 +340,8 @@ export function DocumentScanner() {
                     </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={handleReset}><Trash2 className="mr-2 h-4 w-4"/> Start Over</Button>
-                    <Button type="submit"><Save className="mr-2 h-4 w-4"/> Save to Mailbox</Button>
+                    <Button type="button" variant="outline" onClick={handleReset}><Trash2 /> Start Over</Button>
+                    <Button type="submit"><Save /> Save to Mailbox</Button>
                 </div>
             </form>
         )}
