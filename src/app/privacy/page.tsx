@@ -1,13 +1,12 @@
 
 import Link from "next/link";
-import { LiaLogo } from "@/components/icons/lia-logo";
 
 export default function PrivacyPolicyPage() {
   return (
     <div className="flex flex-col min-h-screen">
        <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center gap-2">
-          <LiaLogo className="h-10" />
+            <div className="font-headline text-2xl font-bold tracking-tighter">Lia</div>
         </Link>
       </header>
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
