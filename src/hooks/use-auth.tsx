@@ -15,21 +15,20 @@ interface FirebaseServices {
   auth: Auth | null;
   db: Firestore | null;
   storage: FirebaseStorage | null;
+  isFirebaseEnabled: boolean;
 }
 
 interface AuthContextType extends FirebaseServices {
   user: User | null;
   loading: boolean;
-  isFirebaseEnabled: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// This function initializes Firebase and returns the services.
-// It's defined outside the provider to be stable.
-const initializeFirebase = (): FirebaseServices & { isFirebaseEnabled: boolean } => {
+const initializeFirebase = (): FirebaseServices => {
+    // Check if we are in a browser environment and if the config is valid
     if (firebaseConfig.apiKey && typeof window !== 'undefined') {
         const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
         const auth = getAuth(app);
@@ -37,6 +36,7 @@ const initializeFirebase = (): FirebaseServices & { isFirebaseEnabled: boolean }
         const storage = getStorage(app);
         return { app, auth, db, storage, isFirebaseEnabled: true };
     }
+    // Return a 'disabled' state if not configured
     return { app: null, auth: null, db: null, storage: null, isFirebaseEnabled: false };
 };
 
@@ -45,31 +45,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Initialize Firebase right away.
-  const { app, auth, db, storage, isFirebaseEnabled } = initializeFirebase();
+  // Initialize Firebase within the component's state to ensure it runs on the client.
+  const [firebaseServices] = useState<FirebaseServices>(initializeFirebase);
   
   const router = useRouter();
 
   useEffect(() => {
-    if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
+    // Only set up the auth listener if Firebase was successfully initialized.
+    if (firebaseServices.auth) {
+      const unsubscribe = onAuthStateChanged(firebaseServices.auth, (user) => {
         setUser(user);
         setLoading(false);
       });
       return () => unsubscribe();
     } else {
+      // If Firebase isn't initialized, stop the loading indicator.
       setLoading(false);
     }
-  }, [auth]);
+  }, [firebaseServices.auth]);
 
   const signInWithGoogle = async () => {
-    if (!auth) {
+    if (!firebaseServices.auth) {
         console.error("Firebase is not configured. Cannot sign in.");
         throw new Error("Firebase is not configured.");
     }
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(firebaseServices.auth, provider);
     } catch (error) {
       console.error("Error signing in with Google", error);
       throw error;
@@ -77,12 +79,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    if (!auth) {
+    if (!firebaseServices.auth) {
         console.error("Firebase is not configured. Cannot log out.");
         return;
     }
     try {
-      await signOut(auth);
+      await signOut(firebaseServices.auth);
       router.push('/');
     } catch (error)      {
         console.error("Error signing out", error);
@@ -90,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, app, auth, db, storage, isFirebaseEnabled, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ ...firebaseServices, user, loading, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
