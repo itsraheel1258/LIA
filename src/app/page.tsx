@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function Home() {
   const { user, loading, signInWithGoogle, isFirebaseEnabled } = useAuth();
@@ -88,7 +89,13 @@ export default function Home() {
         </div>
       </main>
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm">
-        © {new Date().getFullYear()} HeyLia.ai. All rights reserved.
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4">
+            <span>© {new Date().getFullYear()} HeyLia.ai. All rights reserved.</span>
+            <div className="flex gap-4">
+                <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+                <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+            </div>
+        </div>
       </footer>
     </div>
   );
