@@ -38,7 +38,7 @@ export async function cropDocument(input: CropDocumentInput): Promise<string> {
         {media: {url: input.photoDataUri}}
     ],
     config: {
-        responseModalities: ['IMAGE']
+        responseModalities: ['IMAGE', 'TEXT']
     },
   });
 

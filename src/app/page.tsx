@@ -27,6 +27,7 @@ export default function Home() {
   const handleSignIn = async () => {
     if (!isFirebaseEnabled) return;
     try {
+      console.log("Start Google SignIn Process")
       await signInWithGoogle();
       router.push("/dashboard");
     } catch (error: any) {
