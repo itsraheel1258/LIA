@@ -1,16 +1,13 @@
 
-import { Mail } from "lucide-react";
 import Link from "next/link";
+import { LiaLogo } from "@/components/icons/lia-logo";
 
 export default function PrivacyPolicyPage() {
   return (
     <div className="flex flex-col min-h-screen">
        <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center gap-2">
-          <Mail className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold font-headline text-foreground">
-            Lia
-          </h1>
+          <LiaLogo className="h-10" />
         </Link>
       </header>
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -50,11 +47,11 @@ export default function PrivacyPolicyPage() {
           </p>
           
           <h2 className="text-2xl font-bold font-headline mt-8">Contact Us</h2>
-          <p>If you have questions or comments about this Privacy Policy, please contact us at: privacy@heylia.ai</p>
+          <p>If you have questions or comments about this Privacy Policy, please contact us at: privacy@lia.com</p>
         </div>
       </main>
        <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm">
-         <p>© {new Date().getFullYear()} HeyLia.ai. All rights reserved.</p>
+         <p>© {new Date().getFullYear()} Lia. All rights reserved.</p>
       </footer>
     </div>
   );

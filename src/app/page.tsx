@@ -3,12 +3,13 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { Mail, Sparkles, LogIn, AlertTriangle, ArrowRight } from "lucide-react";
+import { Sparkles, LogIn, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { LiaLogo } from "@/components/icons/lia-logo";
 
 export default function Home() {
   const { user, loading, signInWithGoogle, isFirebaseEnabled } = useAuth();
@@ -45,10 +46,7 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <Mail className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold font-headline text-foreground">
-            Lia
-          </h1>
+          <LiaLogo className="h-10" />
         </div>
       </header>
       <main className="flex-grow flex items-center">
@@ -68,7 +66,7 @@ export default function Home() {
               Now with AI-powered organization
             </div>
             <h2 className="text-4xl md:text-6xl font-bold font-headline text-foreground tracking-tighter">
-              HeyLia – Your AI Mail Assistant.
+              Lia – AI Document Assistance.
             </h2>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               Stop drowning in paperwork. Snap a photo of any document, and let Lia intelligently name, tag, and file it away in your secure smart mailbox.
@@ -90,7 +88,7 @@ export default function Home() {
       </main>
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm">
         <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4">
-            <span>© {new Date().getFullYear()} HeyLia.ai. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} Lia. All rights reserved.</span>
             <div className="flex gap-4">
                 <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
                 <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>

@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Lia: Smart Mailbox",
-  description: "Your AI Mail Assistant.",
+  title: "Lia: AI Document Assistance",
+  description: "Your AI-powered document assistant.",
 };
 
 export default function RootLayout({
