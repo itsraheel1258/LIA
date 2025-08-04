@@ -13,9 +13,10 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 // Using the same output schema as generate-filename for consistency
-import { GenerateSmartFilenameOutputSchema } from './generate-filename';
-import type { GenerateSmartFilenameOutput as SummarizeTextOutput } from './generate-filename';
-export type { SummarizeTextOutput };
+import { GenerateSmartFilenameOutputSchema } from '../schemas';
+import type { z as zinfer } from 'genkit';
+
+export type SummarizeTextOutput = zinfer.infer<typeof GenerateSmartFilenameOutputSchema>;
 
 
 const SummarizeTextInputSchema = z.object({

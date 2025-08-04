@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { GenerateSmartFilenameOutputSchema } from '../schemas';
 
 const GenerateSmartFilenameInputSchema = z.object({
   photoDataUri: z
@@ -21,17 +22,6 @@ const GenerateSmartFilenameInputSchema = z.object({
 });
 export type GenerateSmartFilenameInput = z.infer<typeof GenerateSmartFilenameInputSchema>;
 
-export const GenerateSmartFilenameOutputSchema = z.object({
-  filename: z.string().describe('A smart, human-readable filename for the document.'),
-  summary: z.string().describe('A concise, one to two-sentence summary of the document.'),
-  folderPath: z.string().describe('Suggested folder path for the document (e.g., "Finance/Banking").'),
-  folderTags: z.array(z.string()).describe('Suggested folder tags for the document.'),
-  metadata: z.object({
-    sender: z.string().optional().describe('The sender of the document (name and email only), if identifiable.'),
-    date: z.string().optional().describe('The date of the document, if identifiable.'),
-    category: z.string().optional().describe('The category of the document.'),
-  }),
-});
 export type GenerateSmartFilenameOutput = z.infer<typeof GenerateSmartFilenameOutputSchema>;
 
 export async function generateSmartFilename(input: GenerateSmartFilenameInput): Promise<GenerateSmartFilenameOutput> {

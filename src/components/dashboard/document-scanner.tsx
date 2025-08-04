@@ -70,7 +70,7 @@ export function DocumentScanner() {
     try {
       const result = await analyzeDocumentAction(imagePreview, fileType);
       if (result.success && result.data) {
-        setAiResult(result.data);
+        setAiResult(result.data as AiResult);
         setScannerState("reviewing");
       } else {
         toast({
