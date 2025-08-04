@@ -1,18 +1,26 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { FolderOpen, Inbox, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
-import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Folder, Inbox, AlertTriangle, FileText } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import Link from "next/link";
+import { Badge } from "../ui/badge";
+import { format } from "date-fns";
+
+interface Folder {
+  name: string;
+  path: string;
+  count: number;
+  children: Record<string, Folder>;
+  documents: DocumentType[];
+}
 
 export function SmartMailbox() {
   const { user, isFirebaseEnabled, db } = useAuth();
@@ -52,11 +60,86 @@ export function SmartMailbox() {
 
     return () => unsubscribe();
   }, [user, isFirebaseEnabled, db]);
+  
+  const folderTree = useMemo(() => {
+    const root: Folder = { name: "Root", path: "", count: 0, children: {}, documents: [] };
+
+    documents.forEach(doc => {
+      // Reconstruct folder path from tags for grouping.
+      // Assumes tags are ordered hierarchically.
+      const path = doc.tags.join(' / ') || "Uncategorized";
+      const pathParts = path.split(' / ');
+      let currentNode = root;
+
+      pathParts.forEach((part, index) => {
+        if (!currentNode.children[part]) {
+          currentNode.children[part] = {
+            name: part,
+            path: pathParts.slice(0, index + 1).join(' / '),
+            count: 0,
+            children: {},
+            documents: []
+          };
+        }
+        currentNode = currentNode.children[part];
+      });
+      
+      currentNode.documents.push(doc);
+    });
+
+    // Recursively count documents
+    const countDocs = (node: Folder): number => {
+        let count = node.documents.length;
+        Object.values(node.children).forEach(child => {
+            count += countDocs(child);
+        });
+        node.count = count;
+        return count;
+    };
+    countDocs(root);
+    
+    return root.children;
+  }, [documents]);
+
+
+  const renderFolders = (folders: Record<string, Folder>) => {
+    return (
+        <Accordion type="multiple" className="w-full">
+            {Object.values(folders).map(folder => (
+                <AccordionItem value={folder.path} key={folder.path}>
+                    <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-4">
+                            <Folder className="h-6 w-6 text-primary" />
+                            <span className="text-lg font-medium">{folder.name}</span>
+                             <Badge variant="secondary">{folder.count}</Badge>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-6">
+                        {Object.keys(folder.children).length > 0 && renderFolders(folder.children)}
+                        {folder.documents.length > 0 && (
+                            <ul className="space-y-2 pt-2">
+                                {folder.documents.map(doc => (
+                                    <li key={doc.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
+                                      <Link href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
+                                         <FileText className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                                         <span className="group-hover:underline">{doc.filename}</span>
+                                      </Link>
+                                      <span className="text-sm text-muted-foreground">{doc.createdAt ? format(doc.createdAt as Date, "MMM d, yyyy") : '...'}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </AccordionContent>
+                </AccordionItem>
+            ))}
+        </Accordion>
+    );
+  };
 
   if (!isFirebaseEnabled) {
     return (
         <div>
-            <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><FolderOpen /> Your Smart Mailbox</h2>
+            <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Firebase Not Configured</AlertTitle>
@@ -71,67 +154,23 @@ export function SmartMailbox() {
   if (loading) {
       return (
         <div>
-            <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><FolderOpen /> Your Smart Mailbox</h2>
-            <Card>
-                <CardContent className="p-0">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Filename</TableHead>
-                            <TableHead className="hidden sm:table-cell">Tags</TableHead>
-                            <TableHead className="text-right">Date Added</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {[...Array(3)].map((_, i) => (
-                             <TableRow key={i}>
-                                <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                                <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-32" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                </CardContent>
-            </Card>
+            <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
+             <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
         </div>
       )
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><FolderOpen /> Your Smart Mailbox</h2>
+      <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-4">
           {documents.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Filename</TableHead>
-                  <TableHead className="hidden sm:table-cell">Tags</TableHead>
-                  <TableHead className="text-right">Date Added</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">
-                        <Link href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary">
-                            {doc.filename}
-                        </Link>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {doc.tags.map(tag => <Badge key={tag} variant="outline">{tag}</Badge>)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                        {doc.createdAt ? format(doc.createdAt as Date, "MMM d, yyyy") : '...'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            renderFolders(folderTree)
           ) : (
             <div className="text-center p-12">
                 <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
