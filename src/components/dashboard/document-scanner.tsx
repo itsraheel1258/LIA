@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "../ui/textarea";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Label } from "../ui/label";
+import { cn } from "@/lib/utils";
 
 
 type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
@@ -76,6 +78,10 @@ export function DocumentScanner() {
         });
         return;
       }
+    }
+     // Reset the file input so the user can upload the same file again if they want
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
     }
   };
   
@@ -205,8 +211,6 @@ export function DocumentScanner() {
     }
   };
   
-  const openFilePicker = () => fileInputRef.current?.click();
-
   const renderPreview = () => {
     const src = (scannerState === 'reviewing' || scannerState === 'saving') && aiResult?.croppedDataUri ? [aiResult.croppedDataUri] : imagePreviews;
     if (src.length === 0) return null;
@@ -281,10 +285,17 @@ export function DocumentScanner() {
       <CardContent>
         {scannerState === "idle" && (
           <div className="text-center p-8 border-2 border-dashed rounded-lg space-y-4">
-             <Button size="lg" onClick={openFilePicker} className="font-headline">
+             <Label 
+                htmlFor="file-upload" 
+                className={cn(
+                    "font-headline inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                    "bg-primary text-primary-foreground hover:bg-primary/90",
+                    "h-11 rounded-md px-8",
+                    "cursor-pointer"
+                 )}>
               <UploadCloud className="mr-2 h-6 w-6" />
               Upload File(s)
-            </Button>
+            </Label>
             <input
               id="file-upload"
               name="file-upload"
@@ -304,7 +315,29 @@ export function DocumentScanner() {
             {renderPreview()}
             <div className="flex justify-between items-center gap-2">
                  <div className="flex gap-2">
-                    {fileType === 'image' && <Button variant="secondary" onClick={openFilePicker} disabled={scannerState === 'processing'}><FilePlus2 /> Add Pages</Button>}
+                    {fileType === 'image' && (
+                        <Label 
+                            htmlFor="add-pages-upload" 
+                            className={cn(
+                                "font-sans inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                                "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                                "h-10 px-4 py-2",
+                                scannerState === 'processing' ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                            )}>
+                            <FilePlus2 /> Add Pages
+                        </Label>
+                    )}
+                     <input
+                        id="add-pages-upload"
+                        name="add-pages-upload"
+                        type="file"
+                        className="sr-only"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        multiple={true}
+                        disabled={scannerState === 'processing'}
+                    />
                     <Button variant="outline" onClick={handleReset} disabled={scannerState === 'processing'}> <XCircle /> Cancel</Button>
                  </div>
                  <Button onClick={handleAnalyze} disabled={scannerState === 'processing'}>
@@ -357,3 +390,5 @@ export function DocumentScanner() {
     </Card>
   );
 }
+
+    
