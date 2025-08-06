@@ -82,6 +82,6 @@ export function PageHeader({ children }: { children?: React.ReactNode }) {
             </Avatar>
            )}
         </div>
-      </div>
+      </header>
   );
 }
