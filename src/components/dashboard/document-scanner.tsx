@@ -33,8 +33,6 @@ export function DocumentScanner() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      // For simplicity, we'll handle multiple files only for images.
-      // PDFs are often multi-page already.
       if (files[0].type.startsWith('image/')) {
         if (files.length > 1) {
             toast({ title: `${files.length} pages ready to be processed.`});
@@ -79,7 +77,6 @@ export function DocumentScanner() {
         return;
       }
     }
-     // Reset the file input so the user can upload the same file again if they want
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
     }
@@ -94,57 +91,13 @@ export function DocumentScanner() {
       fileInputRef.current.value = "";
     }
   };
-
-  const stitchImages = async (imageSrcs: string[]): Promise<string> => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Could not get canvas context');
-
-        const images = await Promise.all(imageSrcs.map(src => new Promise<HTMLImageElement>((resolve, reject) => {
-            const img = new window.Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = src;
-        })));
-
-        const totalHeight = images.reduce((sum, img) => sum + img.height, 0);
-        const maxWidth = Math.max(...images.map(img => img.width));
-
-        canvas.width = maxWidth;
-        canvas.height = totalHeight;
-
-        let y = 0;
-        for (const img of images) {
-            ctx.drawImage(img, 0, y);
-            y += img.height;
-        }
-
-        return canvas.toDataURL('image/jpeg'); // Or 'image/png'
-    };
   
   const handleAnalyze = async () => {
     if (imagePreviews.length === 0 || !fileType) return;
     setScannerState("processing");
-    
-    let dataUriToAnalyze = imagePreviews[0];
-    
-    // If we have multiple images, stitch them together before analyzing.
-    if (fileType === 'image' && imagePreviews.length > 1) {
-        try {
-            dataUriToAnalyze = await stitchImages(imagePreviews);
-        } catch (error) {
-             toast({
-                variant: "destructive",
-                title: "Image Stitching Failed",
-                description: "Could not combine pages. Please try again.",
-            });
-            setScannerState("capturing");
-            return;
-        }
-    }
 
     try {
-      const result = await analyzeDocumentAction(dataUriToAnalyze, fileType);
+      const result = await analyzeDocumentAction(imagePreviews, fileType);
       if (result.success && result.data) {
         setAiResult(result.data as AiResult);
         setScannerState("reviewing");
@@ -188,7 +141,7 @@ export function DocumentScanner() {
     
     const result = await saveDocumentAction({
         userId: user.uid,
-        imageDataUri: aiResult.croppedDataUri, // Save the cropped image or original PDF
+        imageDataUri: aiResult.croppedDataUri,
         filename,
         tags,
         summary,
@@ -390,5 +343,3 @@ export function DocumentScanner() {
     </Card>
   );
 }
-
-    

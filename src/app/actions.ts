@@ -9,21 +9,24 @@ import { revalidatePath } from "next/cache";
 // Import the initialized server-side Admin Firebase services
 import { adminDb, adminStorage } from "@/lib/firebase/server";
 
-export async function analyzeDocumentAction(dataUri: string, fileType: "image" | "pdf") {
+export async function analyzeDocumentAction(dataUris: string[], fileType: "image" | "pdf") {
   try {
     let analysisResult;
-    let croppedDataUri = dataUri;
+    let finalDataUri: string;
 
     if (fileType === 'image') {
-      croppedDataUri = await cropDocument({ photoDataUri: dataUri });
-      analysisResult = await generateSmartFilename({ photoDataUri: croppedDataUri });
+      // The cropDocument flow now handles multiple images and returns a single stitched image
+      finalDataUri = await cropDocument({ photoDataUris: dataUris });
+      // We still use the single (now stitched and cropped) image for filename generation
+      analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
     } else {
-      // For PDFs, extract text and then generate the filename from the text.
-      const textContent = await extractText({ dataUri });
+      // For PDFs, we only ever get one data URI.
+      const textContent = await extractText({ dataUri: dataUris[0] });
       analysisResult = await summarizeText({ textContent });
+      finalDataUri = dataUris[0]; // For PDFs, the original URI is used for saving.
     }
 
-    return { success: true, data: { ...analysisResult, croppedDataUri } };
+    return { success: true, data: { ...analysisResult, croppedDataUri: finalDataUri } };
   } catch (error: any) {
     console.error("Error analyzing document:", error);
     return { success: false, error: error.message || "Failed to analyze document." };
