@@ -28,13 +28,13 @@ export async function cropDocument(input: CropDocumentInput): Promise<string> {
   const {media: result} = await ai.generate({
     model: 'googleai/gemini-2.0-flash-preview-image-generation',
     prompt: [
-        {text: `You are a document scanner. Your task is to extract the document from the provided images.
-        
+        {text: `You are a precision document scanner. Your task is to isolate the document from the provided image(s).
+
 - If multiple images are provided, they represent pages of a single document. Stitch them together vertically into one tall image before processing.
 - Identify the main document in the resulting image.
-- Perform a perspective transform to make it look like a flat, top-down scan.
-- Crop the image to the exact boundaries of the document.
-- Do not add any padding or background. The output image should ONLY be the document itself.
+- Perform a perspective transform to make the document rectangular, as if it were scanned from directly above.
+- Crop the image to the exact boundaries of the document. Do not include any of the surrounding background or padding.
+- CRITICAL: Do NOT alter, enhance, or change the content (text, images, layout) of the document in any way. The output must be a faithful, unaltered, cropped version of the original.
 - Return the result as a high-quality image.
         `},
         ...input.photoDataUris.map(uri => ({media: {url: uri}}))
