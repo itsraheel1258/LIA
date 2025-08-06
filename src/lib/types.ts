@@ -5,6 +5,7 @@ export interface Document {
   userId: string;
   filename: string;
   tags: string[];
+  folderPath: string;
   storagePath: string;
   downloadUrl:string;
   metadata: {

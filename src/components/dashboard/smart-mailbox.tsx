@@ -6,12 +6,25 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText, ChevronRight } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "../ui/alert-dialog";
+import { deleteDocumentAction } from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
+
 
 interface TreeNode {
   name: string;
@@ -22,9 +35,11 @@ interface TreeNode {
 
 export function SmartMailbox() {
   const { user, isFirebaseEnabled, db } = useAuth();
+  const { toast } = useToast();
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
+  const [docToDelete, setDocToDelete] = useState<DocumentType | null>(null);
 
   useEffect(() => {
     if (!user || !isFirebaseEnabled || !db) {
@@ -63,7 +78,7 @@ export function SmartMailbox() {
     const root: TreeNode = { name: "Root", path: "", children: {}, documents: [] };
 
     documents.forEach(doc => {
-      const path = doc.tags.join('/') || "Uncategorized";
+      const path = doc.folderPath || "Uncategorized";
       const pathParts = path.split('/').map(p => p.trim());
       let currentNode = root;
 
@@ -101,6 +116,24 @@ export function SmartMailbox() {
     }
     return currentNode;
   }, []);
+
+  const handleDeleteConfirm = async () => {
+    if (!docToDelete || !user) return;
+
+    const result = await deleteDocumentAction({
+        documentId: docToDelete.id,
+        storagePath: docToDelete.storagePath,
+        userId: user.uid
+    });
+
+    if (result.success) {
+        toast({ title: "Document deleted successfully." });
+    } else {
+        toast({ variant: "destructive", title: "Deletion Failed", description: result.error });
+    }
+    setDocToDelete(null);
+  };
+
 
   const columns = useMemo(() => {
     const cols: (TreeNode | DocumentType)[][] = [];
@@ -168,17 +201,16 @@ export function SmartMailbox() {
                     <div key={colIndex} className="flex-shrink-0 w-64 border-r border-border last:border-r-0">
                          <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
                              {columnItems.map((item, itemIndex) => {
-                                 const currentItemPath = isNode(item) ? item.path : [...selectedPath, item.filename].join('/');
                                  const isSelected = selectedPath[colIndex] === item.name;
 
                                  return (
-                                     <li key={itemIndex}>
+                                     <li key={itemIndex} className="group flex items-center justify-between rounded-md text-sm hover:bg-muted/50">
                                         {isNode(item) ? (
                                             <button
                                                 onClick={() => handleSelect(item.path)}
                                                 className={cn(
-                                                    "w-full text-left flex items-center justify-between p-2 rounded-md text-sm",
-                                                    isSelected ? "bg-primary/80 text-primary-foreground" : "hover:bg-muted/50"
+                                                    "w-full text-left flex items-center justify-between p-2",
+                                                    isSelected ? "bg-primary/80 text-primary-foreground rounded-md" : ""
                                                 )}
                                             >
                                                 <div className="flex items-center gap-2">
@@ -188,17 +220,22 @@ export function SmartMailbox() {
                                                 <ChevronRight className="h-4 w-4 text-muted-foreground"/>
                                             </button>
                                         ) : (
+                                            <>
                                             <Link 
                                               href={item.downloadUrl} 
                                               target="_blank" 
                                               rel="noopener noreferrer" 
-                                              className="w-full text-left flex items-center justify-between p-2 rounded-md text-sm hover:bg-muted/50"
+                                              className="w-full text-left flex items-center p-2"
                                             >
                                                <div className="flex items-center gap-2">
                                                     <FileText className="h-5 w-5" />
                                                     <span className="truncate">{item.filename}</span>
                                                 </div>
                                             </Link>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 opacity-0 group-hover:opacity-100" onClick={() => setDocToDelete(item)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                            </>
                                         )}
                                      </li>
                                  );
@@ -218,6 +255,21 @@ export function SmartMailbox() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete the document "{docToDelete?.filename}" and remove it from storage. This action cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -65,6 +65,7 @@ interface SaveDocumentInput {
   userId: string;
   imageDataUri: string;
   filename: string;
+  folderPath: string;
   tags: string[];
   summary: string;
   metadata: {
@@ -103,6 +104,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         await adminDb.collection("documents").add({
             userId: input.userId,
             filename: input.filename,
+            folderPath: input.folderPath,
             tags: input.tags,
             storagePath,
             downloadUrl,
@@ -124,5 +126,43 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
              return { success: false, error: "Save failed. Have you enabled Cloud Storage in your Firebase project console? Go to the 'Storage' tab and click 'Get Started'." };
         }
         return { success: false, error: error.message || "Failed to save document." };
+    }
+}
+
+
+interface DeleteDocumentInput {
+    documentId: string;
+    storagePath: string;
+    userId: string;
+}
+
+export async function deleteDocumentAction({ documentId, storagePath, userId }: DeleteDocumentInput) {
+    if (!userId) {
+        return { success: false, error: "Authentication error: User ID is missing." };
+    }
+    
+    try {
+        const docRef = adminDb.collection("documents").doc(documentId);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return { success: false, error: "Document not found." };
+        }
+        
+        if (doc.data()?.userId !== userId) {
+            return { success: false, error: "You do not have permission to delete this document." };
+        }
+
+        // Delete the file from Cloud Storage
+        await adminStorage.bucket().file(storagePath).delete();
+
+        // Delete the document from Firestore
+        await docRef.delete();
+
+        revalidatePath("/dashboard");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting document:", error);
+        return { success: false, error: "Failed to delete document." };
     }
 }

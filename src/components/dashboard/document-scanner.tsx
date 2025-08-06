@@ -149,6 +149,7 @@ export function DocumentScanner() {
         imageDataUri: aiResult.croppedDataUri,
         filename,
         tags,
+        folderPath,
         summary,
         metadata: aiResult.metadata
     });
@@ -174,10 +175,8 @@ export function DocumentScanner() {
 
     const formatDate = (date: string) => date.replace(/-|:|\.\d+/g, '');
 
-    const T = 'T';
-    const Z = 'Z';
-    const start = formatDate(new Date(event.startDate).toISOString());
-    const end = event.endDate ? formatDate(new Date(event.endDate).toISOString()) : start;
+    const start = formatDate(new Date(event.startDate).toISOString()).slice(0, -4) + 'Z';
+    const end = event.endDate ? formatDate(new Date(event.endDate).toISOString()).slice(0, -4) + 'Z' : start;
 
     const url = new URL('https://www.google.com/calendar/render');
     url.searchParams.append('action', 'TEMPLATE');
@@ -360,7 +359,7 @@ export function DocumentScanner() {
                     </div>
                 </div>
 
-                {aiResult.event && (
+                {detectEvents && aiResult.event && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg font-headline flex items-center gap-2">
