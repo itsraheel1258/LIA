@@ -40,12 +40,12 @@ Analyze the document content provided below (either as an image or as text). You
 
 - If an event is found, you MUST extract its details:
   - title: A very short, clear title for the event (e.g., "Vehicle Registration Renewal", "Invoice #123 Due", "Doctor's Appointment"). MAXIMUM 5 WORDS.
-  - startDate: The primary date or due date for the event.
+  - startDate: The primary date or due date for the event. This is a mandatory field if an event is found.
   - endDate: The end date, if a range is specified. Otherwise, leave empty.
   - location: The physical address or relevant place for the event.
   - description: A brief, one-sentence summary of the event's purpose.
 - Dates and times must be in a machine-readable format (YYYY-MM-DDTHH:mm:ss). If a time is not specified, default to a reasonable time (e.g., 9:00 AM).
-- If no specific event, task, or appointment is found, you MUST set the 'found' property to false and leave all other fields empty. Do not invent an event.
+- If no specific event, task, or appointment with a clear date is found, you MUST set the 'found' property to false and leave all other fields empty. Do not invent an event.
 - Do NOT include the full text of the document in any field. Summarize and extract only the essential information.
 
 Document Image: {{#if photoDataUri}}{{media url=photoDataUri}}{{/if}}
@@ -69,9 +69,15 @@ const detectEventFlow = ai.defineFlow(
       return { found: false };
     }
     const {output} = await prompt(input);
-    if (!output) {
+    // If the model can't find a title or a start date, it's not a valid event.
+    if (!output || !output.title || !output.startDate) {
       return { found: false };
     }
-    return output;
+    // Also mark as not found if the model hallucinates a placeholder.
+    if (output.title.toLowerCase().includes('no event found')) {
+      return { found: false };
+    }
+
+    return {...output, found: true};
   }
 );
