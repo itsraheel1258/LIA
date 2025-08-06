@@ -95,7 +95,8 @@ export function DocumentScanner() {
     setScannerState("processing");
 
     try {
-      const result = await analyzeDocumentAction({dataUris: imagePreviews, fileType, detectEvents: true});
+      // Event detection is now on by default
+      const result = await analyzeDocumentAction({dataUris: imagePreviews, fileType});
       if (result.success && result.data) {
         setAiResult(result.data as AiResult);
         setScannerState("reviewing");
