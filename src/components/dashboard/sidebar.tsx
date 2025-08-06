@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Folder, Trash2, Settings, Download } from "lucide-react";
+import { Home, Folder, Trash2, Settings, Download, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Progress } from "../ui/progress";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 const navItems = [
     { href: "/dashboard", label: "Home", icon: Home },
     { href: "/dashboard/documents", label: "My Documents", icon: Folder },
+    { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
     { href: "/dashboard/trash", label: "Trash", icon: Trash2 },
 ];
 
