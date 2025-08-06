@@ -39,7 +39,7 @@ export function DocumentScanner() {
     if (files && files.length > 0) {
       if (files[0].type.startsWith('image/')) {
         if (files.length > 1) {
-            toast({ title: `${files.length} pages ready to be processed.`});
+            toast({ title: `${files.length} pages loaded.`, description: "For multi-page documents, only the first page will be processed and saved."});
         }
         setFileType('image');
         const fileReaders = Array.from(files).map(file => {
@@ -61,16 +61,12 @@ export function DocumentScanner() {
             return;
         }
         setFileType('pdf');
-        toast({
-          title: 'PDFs cannot be cropped',
-          description: 'PDF processing will skip the AI cropping step.',
-        });
-         const reader = new FileReader();
-          reader.onloadend = () => {
-            setImagePreviews([reader.result as string]);
-            setScannerState("capturing");
-          };
-          reader.readAsDataURL(files[0]);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews([reader.result as string]);
+          setScannerState("capturing");
+        };
+        reader.readAsDataURL(files[0]);
 
       } else {
         toast({
@@ -189,9 +185,10 @@ export function DocumentScanner() {
   };
   
   const renderPreview = () => {
-    const isReviewing = scannerState === 'reviewing' || scannerState === 'saving';
+    const isReviewingOrSaving = scannerState === 'reviewing' || scannerState === 'saving';
     let src = imagePreviews;
-    if (isReviewing && fileType === 'pdf' && aiResult?.finalDataUri) {
+    
+    if (isReviewingOrSaving && fileType === 'pdf' && aiResult?.finalDataUri) {
          return (
             <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
                 <FileText className="h-24 w-24 text-primary" />
@@ -199,14 +196,15 @@ export function DocumentScanner() {
             </div>
         );
     }
-    // For reviewing multi-page images, we show the final stitched image.
-    if (isReviewing && fileType === 'image' && aiResult?.finalDataUri) {
+    
+    // On review screen, we just show the first image, which is what will be saved.
+    if (isReviewingOrSaving && aiResult?.finalDataUri) {
         src = [aiResult.finalDataUri];
     }
 
     if (src.length === 0) return null;
 
-    if (fileType === 'pdf' && !isReviewing) {
+    if (fileType === 'pdf' && !isReviewingOrSaving) {
       return (
         <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
           <FileText className="h-24 w-24 text-primary" />

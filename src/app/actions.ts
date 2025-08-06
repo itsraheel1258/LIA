@@ -15,36 +15,6 @@ interface AnalyzeDocumentParams {
   detectEvents: boolean;
 }
 
-// Helper function to stitch images - will run on the server
-async function stitchImages(dataUris: string[]): Promise<string> {
-    const { createCanvas, loadImage } = await import('canvas');
-
-    const images = await Promise.all(dataUris.map(uri => loadImage(uri)));
-    
-    if (images.length === 0) {
-        throw new Error("No images to process.");
-    }
-    
-    if (images.length === 1) {
-        return dataUris[0];
-    }
-
-    const totalHeight = images.reduce((sum, img) => sum + img.height, 0);
-    const maxWidth = Math.max(...images.map(img => img.width));
-
-    const canvas = createCanvas(maxWidth, totalHeight);
-    const ctx = canvas.getContext('2d');
-
-    let y = 0;
-    for (const img of images) {
-        ctx.drawImage(img, 0, y);
-        y += img.height;
-    }
-
-    return canvas.toDataURL('image/png');
-}
-
-
 export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }: AnalyzeDocumentParams) {
   try {
     let analysisResult;
@@ -52,18 +22,17 @@ export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }
     let textContent: string | undefined;
     let eventResult: DetectEventOutput = { found: false };
 
+    // The first image is always used for analysis. For saving, we also just use the first image.
+    finalDataUri = dataUris[0]; 
+
     // Step 1: Handle images or extract text from PDF
     if (fileType === 'image') {
-       // Use the first image for analysis, but stitch all for saving.
-       const analysisImageUri = dataUris[0]; 
-       finalDataUri = await stitchImages(dataUris);
-
        const analysisPromises = [
-           generateSmartFilename({ photoDataUri: analysisImageUri })
+           generateSmartFilename({ photoDataUri: finalDataUri })
        ];
 
        if (detectEvents) {
-           analysisPromises.push(detectEvent({ photoDataUri: analysisImageUri }));
+           analysisPromises.push(detectEvent({ photoDataUri: finalDataUri }));
        }
        
        const results = await Promise.all(analysisPromises);
@@ -73,7 +42,6 @@ export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }
        }
 
     } else { // PDF
-      finalDataUri = dataUris[0]; // For PDFs, the original URI is used.
       textContent = await extractText({ dataUri: finalDataUri });
       
       const analysisPromises = [
