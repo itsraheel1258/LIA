@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download, Loader2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
@@ -40,6 +40,7 @@ export function SmartMailbox() {
   const [loading, setLoading] = useState(true);
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const [docToDelete, setDocToDelete] = useState<DocumentType | null>(null);
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !isFirebaseEnabled || !db) {
@@ -141,6 +142,34 @@ export function SmartMailbox() {
     }
     setDocToDelete(null);
   };
+  
+  const handleDownload = async (doc: DocumentType) => {
+    setDownloadingDocId(doc.id);
+    try {
+        const response = await fetch(doc.downloadUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Download failed", error);
+        toast({
+            variant: "destructive",
+            title: "Download Failed",
+            description: "Could not download the file. Please try again.",
+        });
+    } finally {
+        setDownloadingDocId(null);
+    }
+  }
 
 
   const columns = useMemo(() => {
@@ -250,10 +279,18 @@ export function SmartMailbox() {
                                                     <FileText className="h-5 w-5" />
                                                     <span className="truncate ml-2">{item.filename}</span>
                                                 </div>
-                                                <Button asChild variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                                                    <a href={item.downloadUrl} download={item.filename}>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 flex-shrink-0" 
+                                                    onClick={() => handleDownload(item)}
+                                                    disabled={downloadingDocId === item.id}
+                                                >
+                                                    {downloadingDocId === item.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
                                                         <Download className="h-4 w-4" />
-                                                    </a>
+                                                    )}
                                                 </Button>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 flex-shrink-0" onClick={() => setDocToDelete(item)}>
                                                     <Trash2 className="h-4 w-4" />
