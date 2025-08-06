@@ -21,7 +21,7 @@ import { format } from 'date-fns';
 
 
 type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
-type AiResult = GenerateSmartFilenameOutput & { croppedDataUri: string, event: DetectEventOutput };
+type AiResult = GenerateSmartFilenameOutput & { finalDataUri: string, event: DetectEventOutput };
 
 export function DocumentScanner() {
   const { user, isFirebaseEnabled } = useAuth();
@@ -146,7 +146,7 @@ export function DocumentScanner() {
     
     const result = await saveDocumentAction({
         userId: user.uid,
-        imageDataUri: aiResult.croppedDataUri,
+        imageDataUri: aiResult.finalDataUri,
         filename,
         tags,
         folderPath,
@@ -189,17 +189,9 @@ export function DocumentScanner() {
   };
   
   const renderPreview = () => {
-    const src = (scannerState === 'reviewing' || scannerState === 'saving') && aiResult?.croppedDataUri ? [aiResult.croppedDataUri] : imagePreviews;
-    if (src.length === 0) return null;
-    if (fileType === 'pdf' && scannerState !== 'reviewing') {
-      return (
-        <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
-          <FileText className="h-24 w-24 text-primary" />
-          <p className="mt-4 text-sm text-muted-foreground">PDF Document Ready for Analysis</p>
-        </div>
-      );
-    }
-    if (fileType === 'pdf') {
+    const isReviewing = scannerState === 'reviewing' || scannerState === 'saving';
+    let src = imagePreviews;
+    if (isReviewing && fileType === 'pdf' && aiResult?.finalDataUri) {
          return (
             <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
                 <FileText className="h-24 w-24 text-primary" />
@@ -207,6 +199,22 @@ export function DocumentScanner() {
             </div>
         );
     }
+    // For reviewing multi-page images, we show the final stitched image.
+    if (isReviewing && fileType === 'image' && aiResult?.finalDataUri) {
+        src = [aiResult.finalDataUri];
+    }
+
+    if (src.length === 0) return null;
+
+    if (fileType === 'pdf' && !isReviewing) {
+      return (
+        <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
+          <FileText className="h-24 w-24 text-primary" />
+          <p className="mt-4 text-sm text-muted-foreground">PDF Document Ready for Analysis</p>
+        </div>
+      );
+    }
+    
     return (
         <Carousel className="w-full">
             <CarouselContent>
@@ -243,7 +251,7 @@ export function DocumentScanner() {
             if (fileType === 'pdf') return 'Your PDF is ready. Let Lia work her magic!';
             return `${imagePreviews.length} page(s) loaded. Add more pages or let Lia work her magic!`;
         }
-        case 'processing': return 'First, Lia will crop and enhance the image, then analyze its content.';
+        case 'processing': return 'Lia is analyzing the content of your document.';
         case 'reviewing': return "Review the details below or edit them before saving.";
         case 'saving': return 'Filing your document securely in the Smart Mailbox...';
     }

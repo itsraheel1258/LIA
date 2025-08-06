@@ -3,7 +3,6 @@
 
 import { generateSmartFilename } from "@/ai/flows/generate-filename";
 import { summarizeText } from "@/ai/flows/summarize-text";
-import { cropDocument } from "@/ai/flows/crop-document";
 import { extractText } from "@/ai/flows/extract-text";
 import { revalidatePath } from "next/cache";
 // Import the initialized server-side Admin Firebase services
@@ -16,6 +15,36 @@ interface AnalyzeDocumentParams {
   detectEvents: boolean;
 }
 
+// Helper function to stitch images - will run on the server
+async function stitchImages(dataUris: string[]): Promise<string> {
+    const { createCanvas, loadImage } = await import('canvas');
+
+    const images = await Promise.all(dataUris.map(uri => loadImage(uri)));
+    
+    if (images.length === 0) {
+        throw new Error("No images to process.");
+    }
+    
+    if (images.length === 1) {
+        return dataUris[0];
+    }
+
+    const totalHeight = images.reduce((sum, img) => sum + img.height, 0);
+    const maxWidth = Math.max(...images.map(img => img.width));
+
+    const canvas = createCanvas(maxWidth, totalHeight);
+    const ctx = canvas.getContext('2d');
+
+    let y = 0;
+    for (const img of images) {
+        ctx.drawImage(img, 0, y);
+        y += img.height;
+    }
+
+    return canvas.toDataURL('image/png');
+}
+
+
 export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }: AnalyzeDocumentParams) {
   try {
     let analysisResult;
@@ -23,38 +52,48 @@ export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }
     let textContent: string | undefined;
     let eventResult: DetectEventOutput = { found: false };
 
-    // Step 1: Crop images or extract text from PDF
+    // Step 1: Handle images or extract text from PDF
     if (fileType === 'image') {
-      finalDataUri = await cropDocument({ photoDataUris: dataUris });
-    } else {
+       // Use the first image for analysis, but stitch all for saving.
+       const analysisImageUri = dataUris[0]; 
+       finalDataUri = await stitchImages(dataUris);
+
+       const analysisPromises = [
+           generateSmartFilename({ photoDataUri: analysisImageUri })
+       ];
+
+       if (detectEvents) {
+           analysisPromises.push(detectEvent({ photoDataUri: analysisImageUri }));
+       }
+       
+       const results = await Promise.all(analysisPromises);
+       analysisResult = results[0];
+       if (detectEvents && results.length > 1) {
+           eventResult = results[1] as DetectEventOutput;
+       }
+
+    } else { // PDF
       finalDataUri = dataUris[0]; // For PDFs, the original URI is used.
       textContent = await extractText({ dataUri: finalDataUri });
+      
+      const analysisPromises = [
+          summarizeText({ textContent: textContent! })
+      ];
+      
+       if (detectEvents) {
+          analysisPromises.push(detectEvent({ textContent: textContent! }));
+      }
+      
+      const results = await Promise.all(analysisPromises);
+      analysisResult = results[0];
+      if (detectEvents && results.length > 1) {
+          eventResult = results[1] as DetectEventOutput;
+      }
     }
-
-    // Step 2: Run filename/summary analysis and event detection in parallel
-    const analysisPromises = [];
-
-    if (fileType === 'image') {
-      analysisPromises.push(generateSmartFilename({ photoDataUri: finalDataUri }));
-    } else {
-      analysisPromises.push(summarizeText({ textContent: textContent! }));
-    }
-
-    if (detectEvents) {
-      const eventInput = fileType === 'image' 
-        ? { photoDataUri: finalDataUri } 
-        : { textContent: textContent! };
-      analysisPromises.push(detectEvent(eventInput));
-    }
-
-    const results = await Promise.all(analysisPromises);
     
-    analysisResult = results[0];
-    if (detectEvents) {
-      eventResult = results[1] as DetectEventOutput;
-    }
+    // We use a different name to avoid confusion on the client side.
+    return { success: true, data: { ...analysisResult, finalDataUri: finalDataUri, event: eventResult } };
 
-    return { success: true, data: { ...analysisResult, croppedDataUri: finalDataUri, event: eventResult } };
   } catch (error: any) {
     console.error("Error analyzing document:", error);
     return { success: false, error: error.message || "Failed to analyze document." };
