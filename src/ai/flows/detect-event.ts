@@ -34,13 +34,19 @@ const prompt = ai.definePrompt({
   name: 'detectEventPrompt',
   input: {schema: DetectEventInputSchema},
   output: {schema: DetectEventOutputSchema},
-  prompt: `You are an AI assistant that specializes in finding calendar events, tasks, or appointments within documents.
+  prompt: `You are an AI assistant that specializes in finding calendar events, tasks, or appointments within documents and summarizing them concisely.
 
-Analyze the document content provided below (either as an image or as text). Your goal is to identify a single, primary event.
+Analyze the document content provided below (either as an image or as text). Your goal is to identify a single, primary event and extract only its key details.
 
-- If an event is found, extract its details: title, start time, end time, location, and a brief description.
-- Dates and times should be in a machine-readable format (YYYY-MM-DDTHH:mm:ss). If a time is not specified, default to a reasonable time (e.g., 9:00 AM).
+- If an event is found, extract its details:
+  - title: A short, clear title for the event (e.g., "Vehicle Registration Renewal", "Invoice #123 Due").
+  - startDate: The primary date or due date for the event.
+  - endDate: The end date, if a range is specified. Otherwise, leave empty.
+  - location: The physical address or relevant place for the event.
+  - description: A brief, one-sentence summary of the event's purpose.
+- Dates and times must be in a machine-readable format (YYYY-MM-DDTHH:mm:ss). If a time is not specified, default to a reasonable time (e.g., 9:00 AM).
 - If no specific event, task, or appointment is found, you MUST set the 'found' property to false and leave all other fields empty. Do not invent an event.
+- Do NOT include the full text of the document in any field. Summarize and extract only the essential information.
 
 Document Image: {{#if photoDataUri}}{{media url=photoDataUri}}{{/if}}
 Document Text:
