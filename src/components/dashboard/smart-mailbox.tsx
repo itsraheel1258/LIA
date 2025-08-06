@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2 } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
@@ -103,6 +103,14 @@ export function SmartMailbox() {
   const handleSelect = (path: string) => {
     setSelectedPath(path ? path.split('/') : []);
   };
+
+  const handleBreadcrumbClick = (index: number) => {
+    if (index === -1) {
+      setSelectedPath([]);
+    } else {
+      setSelectedPath(selectedPath.slice(0, index + 1));
+    }
+  }
   
   const getNodeFromPath = useCallback((path: string[], tree: TreeNode): TreeNode | null => {
     if (path.length === 0) return tree;
@@ -178,9 +186,9 @@ export function SmartMailbox() {
              <Card className="h-[400px]">
                 <CardContent className="p-0 h-full">
                     <div className="flex h-full">
-                        <div className="w-1/3 border-r p-2 space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>
-                        <div className="w-1/3 border-r p-2"><Skeleton className="h-8 w-full" /></div>
-                        <div className="w-1/3 p-2"></div>
+                        <div className="w-full md:w-1/3 border-r p-2 space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>
+                        <div className="hidden md:block w-1/3 border-r p-2"><Skeleton className="h-8 w-full" /></div>
+                        <div className="hidden md:block w-1/3 p-2"></div>
                     </div>
                 </CardContent>
              </Card>
@@ -190,15 +198,32 @@ export function SmartMailbox() {
   
   const isNode = (item: any): item is TreeNode => 'children' in item;
 
+  const Breadcrumbs = () => (
+    <nav className="flex items-center text-sm text-muted-foreground p-2 border-b">
+        <button onClick={() => handleBreadcrumbClick(-1)} className="flex items-center gap-1 hover:text-primary">
+            <Home className="h-4 w-4" />
+        </button>
+        {selectedPath.map((part, index) => (
+            <div key={index} className="flex items-center">
+                <ChevronRight className="h-4 w-4 mx-1" />
+                <button onClick={() => handleBreadcrumbClick(index)} className="hover:text-primary truncate">
+                    {part}
+                </button>
+            </div>
+        ))}
+    </nav>
+  );
+
   return (
     <div>
       <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
-      <Card className="h-[400px] bg-card text-card-foreground">
-        <CardContent className="p-0 h-full overflow-hidden">
+      <Card className="min-h-[400px] bg-card text-card-foreground flex flex-col">
+        <Breadcrumbs />
+        <CardContent className="p-0 h-full overflow-hidden flex-grow">
           {documents.length > 0 ? (
-            <div className="flex h-full w-full overflow-x-auto">
+            <div className="flex flex-col md:flex-row h-full w-full overflow-x-auto">
                 {columns.map((columnItems, colIndex) => (
-                    <div key={colIndex} className="flex-shrink-0 w-64 border-r border-border last:border-r-0">
+                     <div key={colIndex} className="flex-shrink-0 w-full md:w-64 border-b md:border-b-0 md:border-r border-border last:border-r-0">
                          <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
                              {columnItems.map((item, itemIndex) => {
                                  const isSelected = selectedPath[colIndex] === item.name;
@@ -220,7 +245,7 @@ export function SmartMailbox() {
                                                 <ChevronRight className="h-4 w-4 text-muted-foreground"/>
                                             </button>
                                         ) : (
-                                            <>
+                                            <div className="flex items-center w-full">
                                             <Link 
                                               href={item.downloadUrl} 
                                               target="_blank" 
@@ -235,7 +260,7 @@ export function SmartMailbox() {
                                             <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 flex-shrink-0" onClick={() => setDocToDelete(item)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
-                                            </>
+                                            </div>
                                         )}
                                      </li>
                                  );
