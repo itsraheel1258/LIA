@@ -38,8 +38,8 @@ const prompt = ai.definePrompt({
 
 Analyze the document content provided below (either as an image or as text). Your goal is to identify a single, primary event and extract only its key details.
 
-- If an event is found, extract its details:
-  - title: A short, clear title for the event (e.g., "Vehicle Registration Renewal", "Invoice #123 Due").
+- If an event is found, you MUST extract its details:
+  - title: A very short, clear title for the event (e.g., "Vehicle Registration Renewal", "Invoice #123 Due", "Doctor's Appointment"). MAXIMUM 5 WORDS.
   - startDate: The primary date or due date for the event.
   - endDate: The end date, if a range is specified. Otherwise, leave empty.
   - location: The physical address or relevant place for the event.

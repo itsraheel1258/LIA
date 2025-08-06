@@ -167,20 +167,24 @@ export function DocumentScanner() {
   };
 
   const createGoogleCalendarLink = (event: DetectEventOutput) => {
-    if (!event.startDate) return '';
-
-    const formatDate = (date: string) => date.replace(/-|:|\.\d+/g, '');
-
-    const start = formatDate(new Date(event.startDate).toISOString()).slice(0, -4) + 'Z';
-    const end = event.endDate ? formatDate(new Date(event.endDate).toISOString()).slice(0, -4) + 'Z' : start;
-
+    if (!event.startDate || !event.title) return '';
+  
+    const formatDateForGoogle = (date: string) => {
+      // Removes dashes, colons, and milliseconds, then adds 'Z'
+      return new Date(date).toISOString().replace(/[-:]|\.\d{3}/g, '');
+    };
+  
+    const start = formatDateForGoogle(event.startDate);
+    // If no end date, make it same as start date for an all-day or point-in-time event
+    const end = event.endDate ? formatDateForGoogle(event.endDate) : start;
+  
     const url = new URL('https://www.google.com/calendar/render');
     url.searchParams.append('action', 'TEMPLATE');
-    url.searchParams.append('text', event.title || 'New Event');
+    url.searchParams.append('text', event.title);
     url.searchParams.append('dates', `${start}/${end}`);
     url.searchParams.append('details', event.description || '');
     url.searchParams.append('location', event.location || '');
-    
+  
     return url.toString();
   };
   
@@ -380,11 +384,13 @@ export function DocumentScanner() {
                           {aiResult.event.endDate && <p><strong>Ends:</strong> {format(new Date(aiResult.event.endDate), 'PPP p')}</p>}
                           {aiResult.event.location && <p><strong>Location:</strong> {aiResult.event.location}</p>}
                           {aiResult.event.description && <p><strong>Description:</strong> {aiResult.event.description}</p>}
-                          <Button asChild variant="outline" size="sm">
-                            <a href={createGoogleCalendarLink(aiResult.event)} target="_blank" rel="noopener noreferrer">
-                              <CalendarPlus className="mr-2 h-4 w-4" /> Add to Calendar
-                            </a>
-                          </Button>
+                           {aiResult.event.startDate && aiResult.event.title && (
+                            <Button asChild variant="outline" size="sm">
+                                <a href={createGoogleCalendarLink(aiResult.event)} target="_blank" rel="noopener noreferrer">
+                                <CalendarPlus className="mr-2 h-4 w-4" /> Add to Calendar
+                                </a>
+                            </Button>
+                          )}
                         </>
                       ) : (
                         <p className="text-muted-foreground">No calendar event was found in this document.</p>
