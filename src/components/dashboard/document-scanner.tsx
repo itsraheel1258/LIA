@@ -16,7 +16,6 @@ import { Textarea } from "../ui/textarea";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Label } from "../ui/label";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "../ui/checkbox";
 import { format } from 'date-fns';
 
 
@@ -28,7 +27,6 @@ export function DocumentScanner() {
   const [scannerState, setScannerState] = useState<ScannerState>("idle");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
-  const [detectEvents, setDetectEvents] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const { toast } = useToast();
   
@@ -87,7 +85,6 @@ export function DocumentScanner() {
     setImagePreviews([]);
     setAiResult(null);
     setFileType(null);
-    setDetectEvents(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -98,7 +95,7 @@ export function DocumentScanner() {
     setScannerState("processing");
 
     try {
-      const result = await analyzeDocumentAction({dataUris: imagePreviews, fileType, detectEvents});
+      const result = await analyzeDocumentAction({dataUris: imagePreviews, fileType, detectEvents: true});
       if (result.success && result.data) {
         setAiResult(result.data as AiResult);
         setScannerState("reviewing");
@@ -250,10 +247,10 @@ export function DocumentScanner() {
     switch(scannerState) {
         case 'idle': return 'Click the button below to upload a document.';
         case 'capturing': {
-            if (fileType === 'pdf') return 'Your PDF is ready. Let Lia work her magic!';
-            return `${imagePreviews.length} page(s) loaded. Add more pages or let Lia work her magic!`;
+            if (fileType === 'pdf') return 'Your PDF is ready. Lia will automatically detect any events or tasks.';
+            return `${imagePreviews.length} page(s) loaded. Add more pages or let Lia work her magic! Lia will automatically detect any events or tasks.`;
         }
-        case 'processing': return 'Lia is analyzing the content of your document.';
+        case 'processing': return 'Lia is analyzing the content and any potential events in your document.';
         case 'reviewing': return "Review the details below or edit them before saving.";
         case 'saving': return 'Filing your document securely in the Smart Mailbox...';
     }
@@ -300,15 +297,6 @@ export function DocumentScanner() {
         {(scannerState === "capturing" || scannerState === "processing") && imagePreviews.length > 0 && (
           <div className="space-y-4">
             {renderPreview()}
-            <div className="flex items-center space-x-2">
-                <Checkbox id="detect-events" checked={detectEvents} onCheckedChange={(checked) => setDetectEvents(Boolean(checked))} />
-                <label
-                    htmlFor="detect-events"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                    Detect calendar events & tasks
-                </label>
-            </div>
             <div className="flex justify-between items-center gap-2">
                  <div className="flex gap-2">
                     {fileType === 'image' && (
@@ -369,7 +357,7 @@ export function DocumentScanner() {
                     </div>
                 </div>
 
-                {detectEvents && aiResult.event && (
+                {aiResult.event && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg font-headline flex items-center gap-2">
@@ -416,3 +404,5 @@ export function DocumentScanner() {
     </Card>
   );
 }
+
+    

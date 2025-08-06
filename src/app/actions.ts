@@ -15,7 +15,7 @@ interface AnalyzeDocumentParams {
   detectEvents: boolean;
 }
 
-export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }: AnalyzeDocumentParams) {
+export async function analyzeDocumentAction({ dataUris, fileType }: Omit<AnalyzeDocumentParams, 'detectEvents'> & { detectEvents: true }) {
   try {
     let analysisResult;
     let finalDataUri: string;
@@ -27,36 +27,22 @@ export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }
 
     // Step 1: Handle images or extract text from PDF
     if (fileType === 'image') {
-       const analysisPromises = [
-           generateSmartFilename({ photoDataUri: finalDataUri })
-       ];
-
-       if (detectEvents) {
-           analysisPromises.push(detectEvent({ photoDataUri: finalDataUri }));
-       }
-       
-       const results = await Promise.all(analysisPromises);
-       analysisResult = results[0];
-       if (detectEvents && results.length > 1) {
-           eventResult = results[1] as DetectEventOutput;
-       }
+       const [analysis, event] = await Promise.all([
+           generateSmartFilename({ photoDataUri: finalDataUri }),
+           detectEvent({ photoDataUri: finalDataUri })
+       ]);
+       analysisResult = analysis;
+       eventResult = event;
 
     } else { // PDF
       textContent = await extractText({ dataUri: finalDataUri });
       
-      const analysisPromises = [
-          summarizeText({ textContent: textContent! })
-      ];
-      
-       if (detectEvents) {
-          analysisPromises.push(detectEvent({ textContent: textContent! }));
-      }
-      
-      const results = await Promise.all(analysisPromises);
-      analysisResult = results[0];
-      if (detectEvents && results.length > 1) {
-          eventResult = results[1] as DetectEventOutput;
-      }
+      const [analysis, event] = await Promise.all([
+          summarizeText({ textContent: textContent! }),
+          detectEvent({ textContent: textContent! })
+      ]);
+      analysisResult = analysis;
+      eventResult = event;
     }
     
     // We use a different name to avoid confusion on the client side.
@@ -173,3 +159,5 @@ export async function deleteDocumentAction({ documentId, storagePath, userId }: 
         return { success: false, error: "Failed to delete document." };
     }
 }
+
+    
