@@ -204,7 +204,7 @@ export function SmartMailbox() {
                                  const isSelected = selectedPath[colIndex] === item.name;
 
                                  return (
-                                     <li key={itemIndex} className="group flex items-center justify-between rounded-md text-sm hover:bg-muted/50">
+                                     <li key={itemIndex} className="flex items-center justify-between rounded-md text-sm hover:bg-muted/50">
                                         {isNode(item) ? (
                                             <button
                                                 onClick={() => handleSelect(item.path)}
@@ -225,14 +225,14 @@ export function SmartMailbox() {
                                               href={item.downloadUrl} 
                                               target="_blank" 
                                               rel="noopener noreferrer" 
-                                              className="w-full text-left flex items-center p-2"
+                                              className="flex-grow text-left flex items-center p-2"
                                             >
                                                <div className="flex items-center gap-2">
                                                     <FileText className="h-5 w-5" />
                                                     <span className="truncate">{item.filename}</span>
                                                 </div>
                                             </Link>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 opacity-0 group-hover:opacity-100" onClick={() => setDocToDelete(item)}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 flex-shrink-0" onClick={() => setDocToDelete(item)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                             </>
