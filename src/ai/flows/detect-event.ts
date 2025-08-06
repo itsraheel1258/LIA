@@ -34,16 +34,16 @@ const prompt = ai.definePrompt({
   name: 'detectEventPrompt',
   input: {schema: DetectEventInputSchema},
   output: {schema: DetectEventOutputSchema},
-  prompt: `You are an AI assistant that specializes in finding calendar events, tasks, or appointments within documents and summarizing them concisely.
+  prompt: `You are an AI assistant that specializes in finding calendar events, tasks, or appointments within documents and summarizing them concisely. You are particularly skilled at identifying due dates on bills, invoices, and official notices.
 
-Analyze the document content provided below (either as an image or as text). Your goal is to identify a single, primary event and extract only its key details.
+Analyze the document content provided below (either as an image or as text). Your goal is to identify a single, primary event, bill, or task and extract only its key details.
 
-- If an event is found, you MUST extract its details:
+- If an event is found (like an appointment, a bill due date, or a registration renewal), you MUST extract its details:
   - title: A very short, clear title for the event (e.g., "Vehicle Registration Renewal", "Invoice #123 Due", "Doctor's Appointment"). MAXIMUM 5 WORDS.
-  - startDate: The primary date or due date for the event. This is a mandatory field if an event is found.
+  - startDate: The primary date or due date for the event. This is a mandatory field if an event is found. Look for keywords like "Due Date", "Payment Due", or "Date".
   - endDate: The end date, if a range is specified. Otherwise, leave empty.
   - location: The physical address or relevant place for the event.
-  - description: A brief, one-sentence summary of the event's purpose.
+  - description: A brief, one-sentence summary of the event's purpose. Include the amount due if it's a bill.
 - Dates and times must be in a machine-readable format (YYYY-MM-DDTHH:mm:ss). If a time is not specified, default to a reasonable time (e.g., 9:00 AM).
 - If no specific event, task, or appointment with a clear date is found, you MUST set the 'found' property to false and leave all other fields empty. Do not invent an event.
 - Do NOT include the full text of the document in any field. Summarize and extract only the essential information.
