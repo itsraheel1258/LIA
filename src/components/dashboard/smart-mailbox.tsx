@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
@@ -246,20 +246,18 @@ export function SmartMailbox() {
                                             </button>
                                         ) : (
                                             <div className="flex items-center w-full">
-                                            <Link 
-                                              href={item.downloadUrl} 
-                                              target="_blank" 
-                                              rel="noopener noreferrer" 
-                                              className="flex-grow text-left flex items-center p-2"
-                                            >
-                                               <div className="flex items-center gap-2">
+                                                <div className="flex-grow text-left flex items-center p-2">
                                                     <FileText className="h-5 w-5" />
-                                                    <span className="truncate">{item.filename}</span>
+                                                    <span className="truncate ml-2">{item.filename}</span>
                                                 </div>
-                                            </Link>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 flex-shrink-0" onClick={() => setDocToDelete(item)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                                <Button asChild variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                                    <a href={item.downloadUrl} download={item.filename}>
+                                                        <Download className="h-4 w-4" />
+                                                    </a>
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 flex-shrink-0" onClick={() => setDocToDelete(item)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         )}
                                      </li>
@@ -298,3 +296,5 @@ export function SmartMailbox() {
     </div>
   );
 }
+
+    
