@@ -8,25 +8,53 @@ import { extractText } from "@/ai/flows/extract-text";
 import { revalidatePath } from "next/cache";
 // Import the initialized server-side Admin Firebase services
 import { adminDb, adminStorage } from "@/lib/firebase/server";
+import { detectEvent, type DetectEventOutput } from "@/ai/flows/detect-event";
 
-export async function analyzeDocumentAction(dataUris: string[], fileType: "image" | "pdf") {
+interface AnalyzeDocumentParams {
+  dataUris: string[];
+  fileType: "image" | "pdf";
+  detectEvents: boolean;
+}
+
+export async function analyzeDocumentAction({ dataUris, fileType, detectEvents }: AnalyzeDocumentParams) {
   try {
     let analysisResult;
     let finalDataUri: string;
+    let textContent: string | undefined;
+    let eventResult: DetectEventOutput = { found: false };
 
+    // Step 1: Crop images or extract text from PDF
     if (fileType === 'image') {
-      // The cropDocument flow now handles multiple images and returns a single stitched image
       finalDataUri = await cropDocument({ photoDataUris: dataUris });
-      // We still use the single (now stitched and cropped) image for filename generation
-      analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
     } else {
-      // For PDFs, we only ever get one data URI.
-      const textContent = await extractText({ dataUri: dataUris[0] });
-      analysisResult = await summarizeText({ textContent });
-      finalDataUri = dataUris[0]; // For PDFs, the original URI is used for saving.
+      finalDataUri = dataUris[0]; // For PDFs, the original URI is used.
+      textContent = await extractText({ dataUri: finalDataUri });
     }
 
-    return { success: true, data: { ...analysisResult, croppedDataUri: finalDataUri } };
+    // Step 2: Run filename/summary analysis and event detection in parallel
+    const analysisPromises = [];
+
+    if (fileType === 'image') {
+      analysisPromises.push(generateSmartFilename({ photoDataUri: finalDataUri }));
+    } else {
+      analysisPromises.push(summarizeText({ textContent: textContent! }));
+    }
+
+    if (detectEvents) {
+      const eventInput = fileType === 'image' 
+        ? { photoDataUri: finalDataUri } 
+        : { textContent: textContent! };
+      analysisPromises.push(detectEvent(eventInput));
+    }
+
+    const results = await Promise.all(analysisPromises);
+    
+    analysisResult = results[0];
+    if (detectEvents) {
+      eventResult = results[1] as DetectEventOutput;
+    }
+
+    return { success: true, data: { ...analysisResult, croppedDataUri: finalDataUri, event: eventResult } };
   } catch (error: any) {
     console.error("Error analyzing document:", error);
     return { success: false, error: error.message || "Failed to analyze document." };

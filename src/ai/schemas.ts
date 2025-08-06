@@ -16,3 +16,13 @@ export const GenerateSmartFilenameOutputSchema = z.object({
     category: z.string().optional().describe('The category of the document.'),
   }),
 });
+
+
+export const DetectEventOutputSchema = z.object({
+  found: z.boolean().describe("Whether an event was found in the document."),
+  title: z.string().optional().describe("The title of the event."),
+  startDate: z.string().optional().describe("The start date and time of the event in ISO 8601 format (e.g., YYYY-MM-DDTHH:mm:ss)."),
+  endDate: z.string().optional().describe("The end date and time of the event in ISO 8601 format (e.g., YYYY-MM-DDTHH:mm:ss)."),
+  location: z.string().optional().describe("The location of the event."),
+  description: z.string().optional().describe("A brief description of the event."),
+});

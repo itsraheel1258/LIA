@@ -3,28 +3,32 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, UploadCloud, Copy, FilePlus2 } from "lucide-react";
+import { Loader2, Sparkles, FileEdit, Save, Trash2, XCircle, FileText, UploadCloud, Copy, FilePlus2, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
+import type { DetectEventOutput } from "@/ai/flows/detect-event";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "../ui/textarea";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Label } from "../ui/label";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "../ui/checkbox";
+import { format } from 'date-fns';
 
 
 type ScannerState = "idle" | "capturing" | "processing" | "reviewing" | "saving";
-type AiResult = GenerateSmartFilenameOutput & { croppedDataUri: string };
+type AiResult = GenerateSmartFilenameOutput & { croppedDataUri: string, event: DetectEventOutput };
 
 export function DocumentScanner() {
   const { user, isFirebaseEnabled } = useAuth();
   const [scannerState, setScannerState] = useState<ScannerState>("idle");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
+  const [detectEvents, setDetectEvents] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const { toast } = useToast();
   
@@ -87,6 +91,7 @@ export function DocumentScanner() {
     setImagePreviews([]);
     setAiResult(null);
     setFileType(null);
+    setDetectEvents(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -97,7 +102,7 @@ export function DocumentScanner() {
     setScannerState("processing");
 
     try {
-      const result = await analyzeDocumentAction(imagePreviews, fileType);
+      const result = await analyzeDocumentAction({dataUris: imagePreviews, fileType, detectEvents});
       if (result.success && result.data) {
         setAiResult(result.data as AiResult);
         setScannerState("reviewing");
@@ -162,6 +167,26 @@ export function DocumentScanner() {
       });
       setScannerState("reviewing");
     }
+  };
+
+  const createGoogleCalendarLink = (event: DetectEventOutput) => {
+    if (!event.startDate) return '';
+
+    const formatDate = (date: string) => date.replace(/-|:|\.\d+/g, '');
+
+    const T = 'T';
+    const Z = 'Z';
+    const start = formatDate(new Date(event.startDate).toISOString());
+    const end = event.endDate ? formatDate(new Date(event.endDate).toISOString()) : start;
+
+    const url = new URL('https://www.google.com/calendar/render');
+    url.searchParams.append('action', 'TEMPLATE');
+    url.searchParams.append('text', event.title || 'New Event');
+    url.searchParams.append('dates', `${start}/${end}`);
+    url.searchParams.append('details', event.description || '');
+    url.searchParams.append('location', event.location || '');
+    
+    return url.toString();
   };
   
   const renderPreview = () => {
@@ -266,6 +291,15 @@ export function DocumentScanner() {
         {(scannerState === "capturing" || scannerState === "processing") && imagePreviews.length > 0 && (
           <div className="space-y-4">
             {renderPreview()}
+            <div className="flex items-center space-x-2">
+                <Checkbox id="detect-events" checked={detectEvents} onCheckedChange={(checked) => setDetectEvents(Boolean(checked))} />
+                <label
+                    htmlFor="detect-events"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                    Detect calendar events & tasks
+                </label>
+            </div>
             <div className="flex justify-between items-center gap-2">
                  <div className="flex gap-2">
                     {fileType === 'image' && (
@@ -325,6 +359,36 @@ export function DocumentScanner() {
                         {aiResult.metadata.category && <p><strong className="text-muted-foreground">Category:</strong> {aiResult.metadata.category}</p>}
                     </div>
                 </div>
+
+                {aiResult.event && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg font-headline flex items-center gap-2">
+                        <CalendarPlus /> Detected Event
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-3">
+                      {aiResult.event.found ? (
+                        <>
+                          <p><strong>Title:</strong> {aiResult.event.title}</p>
+                          {aiResult.event.startDate && <p><strong>Starts:</strong> {format(new Date(aiResult.event.startDate), 'PPP p')}</p>}
+                          {aiResult.event.endDate && <p><strong>Ends:</strong> {format(new Date(aiResult.event.endDate), 'PPP p')}</p>}
+                          {aiResult.event.location && <p><strong>Location:</strong> {aiResult.event.location}</p>}
+                          {aiResult.event.description && <p><strong>Description:</strong> {aiResult.event.description}</p>}
+                          <Button asChild variant="outline" size="sm">
+                            <a href={createGoogleCalendarLink(aiResult.event)} target="_blank" rel="noopener noreferrer">
+                              <CalendarPlus className="mr-2 h-4 w-4" /> Add to Calendar
+                            </a>
+                          </Button>
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">No calendar event was found in this document.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+
                 <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={handleReset}><Trash2 /> Start Over</Button>
                     <Button type="submit"><Save /> Save to Mailbox</Button>
