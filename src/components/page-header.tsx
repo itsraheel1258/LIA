@@ -16,22 +16,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { HardDrive, LogOut, User as UserIcon } from "lucide-react";
+import { HardDrive, LogOut, User as UserIcon, Search, Bell } from "lucide-react";
+import { Input } from "./ui/input";
 
-export function PageHeader() {
+export function PageHeader({ children }: { children?: React.ReactNode }) {
   const { user, logout, isFirebaseEnabled } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <div className="mr-4 flex items-center">
-          <div className="font-headline text-2xl font-bold tracking-tighter">Lia</div>
+    <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 sticky top-0 z-30">
+        {children}
+        <div className="w-full flex-1">
+            <form>
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search my files..."
+                        className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
+                    />
+                </div>
+            </form>
         </div>
-        <div className="flex flex-1 items-center justify-end space-x-4">
-          {isFirebaseEnabled && user && (
+
+        <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Bell className="h-5 w-5" />
+                <span className="sr-only">Toggle notifications</span>
+            </Button>
+
+            {isFirebaseEnabled && user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={user?.photoURL ?? ""} alt={user?.displayName ?? ""} />
                     <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
@@ -67,6 +83,5 @@ export function PageHeader() {
            )}
         </div>
       </div>
-    </header>
   );
 }
