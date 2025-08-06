@@ -44,7 +44,8 @@ Analyze the document content provided below (either as an image or as text). You
   - endDate: The end date, if a range is specified. Otherwise, leave empty.
   - location: The physical address or relevant place for the event.
   - description: A brief, one-sentence summary of the event's purpose. Include the amount due if it's a bill.
-- Dates and times must be in a machine-readable format (YYYY-MM-DDTHH:mm:ss). If a time is not specified, default to a reasonable time (e.g., 9:00 AM).
+- Dates and times must be in a machine-readable format (YYYY-MM-DDTHH:mm:ss). 
+- **CRITICAL RULE**: If a date in the document does not specify a year (e.g., "August 23rd", "10/08"), you MUST assume it is for the current year. Do not use a past year unless it is explicitly written in the document.
 - If no specific event, task, or appointment with a clear date is found, you MUST set the 'found' property to false and leave all other fields empty. Do not invent an event.
 - Do NOT include the full text of the document in any field. Summarize and extract only the essential information.
 
