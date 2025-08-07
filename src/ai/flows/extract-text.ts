@@ -23,7 +23,21 @@ export type ExtractTextInput = z.infer<typeof ExtractTextInputSchema>;
 
 export async function extractText(input: ExtractTextInput): Promise<string> {
     const llmResponse = await ai.generate({
-        prompt: [{text: "Extract the text from this document"}, {media: {url: input.dataUri}}],
+        prompt: [
+          {
+            text: `
+    Extract **all readable information** from the following document, including:
+    
+    - Plain text content
+    - Dates (in any format)
+    - Headings, tables, labels, or key-value pairs
+    - Numbers, bullet points, or lists
+    - Any structured data or metadata found
+    
+    Return the result as cleanly formatted text, preserving original structure as much as possible.
+            `.trim()
+          }, 
+          {media: {url: input.dataUri}}],
     });
   
   return llmResponse.text;

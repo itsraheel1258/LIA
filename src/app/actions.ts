@@ -20,7 +20,7 @@ export async function analyzeDocumentAction({ dataUris, fileType }: Omit<Analyze
     let analysisResult;
     let finalDataUri: string;
     let textContent: string | undefined;
-    let eventResult: DetectEventOutput = { found: false };
+    let eventResult: DetectEventOutput = { events: []  };
 
     // The first image is always used for analysis. For saving, we also just use the first image.
     finalDataUri = dataUris[0]; 
@@ -45,8 +45,15 @@ export async function analyzeDocumentAction({ dataUris, fileType }: Omit<Analyze
       eventResult = event;
     }
     
-    // We use a different name to avoid confusion on the client side.
-    return { success: true, data: { ...analysisResult, finalDataUri: finalDataUri, event: eventResult } };
+    return {
+        success: true,
+        data: {
+          ...analysisResult,
+          finalDataUri,
+          events: eventResult.events,
+        },
+      };
+      
 
   } catch (error: any) {
     console.error("Error analyzing document:", error);
