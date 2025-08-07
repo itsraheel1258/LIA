@@ -1,9 +1,8 @@
 import { z } from "genkit";
 
 export const EventSchema = z.object({
-    title: z.string(),
-    startDate: z.string(),
-    description: z.string().nullable(),
+    title: z.string().describe("The title of the event."),
+    startDate: z.string().describe("The start date of the event."),
   });
   
   

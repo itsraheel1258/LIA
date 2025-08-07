@@ -33,8 +33,7 @@ const detectEventFlow = ai.defineFlow(
       return { events: [
         {
           title: "No event found",
-          startDate: "",
-          description: '',
+          startDate: "No start date found",
         }
       ] };
     }
@@ -45,8 +44,7 @@ const detectEventFlow = ai.defineFlow(
       return { events: [
         {
           title: "No event found",
-          startDate: "",
-          description: '',
+          startDate: "No start date found",
         }
       ] };
     }
@@ -56,8 +54,7 @@ const detectEventFlow = ai.defineFlow(
       return { events: [
         {
           title: "No event found",
-          startDate: "",
-          description: '',
+          startDate: "No start date found",
         }
       ] };
     }

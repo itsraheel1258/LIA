@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef } from "react";
@@ -229,13 +228,36 @@ export function DocumentScanner() {
     if (!event.startDate || !event.title) return "";
 
     const formatDateForGoogle = (dateStr: string) => {
-      // Removes dashes, colons, and milliseconds from ISO string, then adds 'Z' for UTC
-      return new Date(dateStr).toISOString().replace(/[-:]|\.\d{3}/g, "");
+      try {
+        // Try to parse the date string
+        const date = new Date(dateStr);
+        
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+          console.warn(`Invalid date string: ${dateStr}`);
+          return "";
+        }
+        
+        // Removes dashes, colons, and milliseconds from ISO string, then adds 'Z' for UTC
+        return date.toISOString().replace(/[-:]|\.\d{3}/g, "");
+      } catch (error) {
+        console.warn(`Error formatting date: ${dateStr}`, error);
+        return "";
+      }
     };
 
     const start = formatDateForGoogle(event.startDate);
+    if (!start) {
+      console.warn("Could not format start date for Google Calendar link");
+      return "";
+    }
+    
     // If no end date, make it same as start date
     const end = event.endDate ? formatDateForGoogle(event.endDate) : start;
+    if (!end) {
+      console.warn("Could not format end date for Google Calendar link");
+      return "";
+    }
 
     const url = new URL("https://www.google.com/calendar/render");
     url.searchParams.append("action", "TEMPLATE");
@@ -549,16 +571,25 @@ export function DocumentScanner() {
                         </p>
                       )}
 
-                      <Button asChild variant="outline" size="sm">
-                        <a
-                          href={createGoogleCalendarLink(event)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <CalendarPlus className="mr-2 h-4 w-4" /> Add to
-                          Calendar
-                        </a>
-                      </Button>
+                      {(() => {
+                        const calendarLink = createGoogleCalendarLink(event);
+                        return calendarLink ? (
+                          <Button asChild variant="outline" size="sm">
+                            <a
+                              href={calendarLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <CalendarPlus className="mr-2 h-4 w-4" /> Add to
+                              Calendar
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" size="sm" disabled>
+                            <CalendarPlus className="mr-2 h-4 w-4" /> No Event
+                          </Button>
+                        );
+                      })()}
                     </div>
                   ))}
                 </CardContent>
