@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "lia-smart-mailbox",
+    "lia-stagging": "lia-smart-mailbox"
+  },
+  "targets": {},
+  "etags": {}
+}

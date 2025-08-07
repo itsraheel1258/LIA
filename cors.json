@@ -1,0 +1,13 @@
+[
+    {
+      "origin": [
+        "http://localhost:9002",
+        "https://6000-firebase-studio-1753043300341.cluster-cxy3ise3prdrmx53pigwexthgs.cloudworkstations.dev",
+        "https://studio.firebase.google.com/studio-3047405270"
+      ],
+      "method": ["GET", "HEAD"],
+      "responseHeader": ["Content-Type"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+  
