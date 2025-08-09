@@ -247,8 +247,12 @@ export function DocumentScanner() {
     url.searchParams.append("action", "TEMPLATE");
     url.searchParams.append("text", event.title);
     url.searchParams.append("dates", `${start}/${end}`);
-    if (event.description)
-      url.searchParams.append("details", event.description);
+    
+    const details = event.description 
+        ? `${event.description}\n\nGet your own Smart Mail Assistant @ HeyLia.ai`
+        : "Get your own Smart Mail Assistant @ HeyLia.ai";
+
+    url.searchParams.append("details", details);
 
     return url.toString();
   };
