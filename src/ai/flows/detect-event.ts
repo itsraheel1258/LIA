@@ -30,33 +30,18 @@ const detectEventFlow = ai.defineFlow(
   },
   async input => {
     if (!input.photoDataUri && !input.textContent) {
-      return { events: [
-        {
-          title: "No event found",
-          startDate: "No start date found",
-        }
-      ] };
+      return { events: [] };
     }
     const {output} = await prompt(input);
     console.log("Detecting Output,",output)
     // If the model can't find a title or a start date, it's not a valid event.
     if (!output || !Array.isArray(output.events) || output.events.length === 0) {
-      return { events: [
-        {
-          title: "No event found",
-          startDate: "No start date found",
-        }
-      ] };
+      return { events: [] };
     }
     
     // Also mark as not found if the model hallucinates a placeholder.
     if (output.events[0]?.title === 'no event found') {
-      return { events: [
-        {
-          title: "No event found",
-          startDate: "No start date found",
-        }
-      ] };
+      return { events: [] };
     }
 
     return output;

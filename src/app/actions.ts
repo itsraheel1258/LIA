@@ -45,12 +45,15 @@ export async function analyzeDocumentAction({ dataUris, fileType }: Omit<Analyze
       eventResult = event;
     }
     
+    // Filter out any invalid events before returning
+    const validEvents = eventResult.events.filter(e => e.title && e.startDate && e.title !== 'No event found' && e.startDate !== 'No start date found');
+    
     return {
         success: true,
         data: {
           ...analysisResult,
           finalDataUri,
-          events: eventResult.events,
+          events: validEvents,
         },
       };
       
@@ -173,5 +176,3 @@ export async function deleteDocumentAction({ documentId, storagePath, userId }: 
         return { success: false, error: "Failed to delete document." };
     }
 }
-
-    
