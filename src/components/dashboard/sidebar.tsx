@@ -10,7 +10,7 @@ import { Progress } from "../ui/progress";
 import { Card, CardContent, CardHeader } from "../ui/card";
 
 const navItems = [
-    { href: "/dashboard", label: "Home", icon: Home },
+    { href: "/dashboard", label: "Add New Document", icon: Home },
     { href: "/dashboard/documents", label: "My Documents", icon: Folder },
     { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
     { href: "/dashboard/trash", label: "Trash", icon: Trash2 },
