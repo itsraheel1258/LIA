@@ -7,7 +7,8 @@ import { extractText } from "@/ai/flows/extract-text";
 import { revalidatePath } from "next/cache";
 // Import the initialized server-side Admin Firebase services
 import { adminDb, adminStorage } from "@/lib/firebase/server";
-import { detectEvent, type DetectEventOutput } from "@/ai/flows/detect-event";
+import { detectEvent } from "@/ai/flows/detect-event";
+import type { DetectEventOutput } from "@/Schema/detecteventSchema";
 import type { CalendarEvent } from "@/lib/types";
 
 interface AnalyzeDocumentParams {
