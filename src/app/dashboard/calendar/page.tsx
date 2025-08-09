@@ -52,11 +52,12 @@ export default function CalendarPage() {
     }
     
     setLoading(true);
-    // Query documents that have events associated with them.
+    // Query documents where the event.events array is not empty.
     const q = query(
         collection(db, "documents"), 
         where("userId", "==", user.uid),
-        where("event.found", "==", true),
+        where("event.events", "!=", []),
+        orderBy("event.events"),
         orderBy("createdAt", "desc")
     );
 
