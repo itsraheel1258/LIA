@@ -27,7 +27,7 @@ import { deleteDocumentAction } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentPreview } from "./document-preview";
 import Image from "next/image";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, parseISO } from "date-fns";
 import { Separator } from "../ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -70,7 +70,7 @@ function RecentUploads({ documents, onSelect, selectedId }: { documents: Documen
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">{doc.folderPath}</TableCell>
                                 <TableCell className="text-right text-muted-foreground text-xs">
-                                    {doc.createdAt ? formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true }) : ''}
+                                    {doc.createdAt ? formatDistanceToNow(doc.createdAt instanceof Date ? doc.createdAt : doc.createdAt.toDate(), { addSuffix: true }) : ''}
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -109,10 +109,11 @@ function SmartMailboxComponent() {
       const docs: DocumentType[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        const createdAt = data.createdAt as Timestamp;
         docs.push({
           id: doc.id,
           ...data,
-          createdAt: (data.createdAt as Timestamp)?.toDate() 
+          createdAt: createdAt ? createdAt.toDate() : new Date()
         } as DocumentType);
       });
       setDocuments(docs);
@@ -143,7 +144,11 @@ function SmartMailboxComponent() {
   const { folderTree, recentUploads } = useMemo(() => {
     const root: TreeNode = { name: "Root", path: "", children: {}, documents: [] };
 
-    const sortedDocs = [...documents].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sortedDocs = [...documents].sort((a,b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : a.createdAt.toDate();
+      const dateB = b.createdAt instanceof Date ? b.createdAt : b.createdAt.toDate();
+      return dateB.getTime() - dateA.getTime();
+    });
 
     documents.forEach(doc => {
       const path = doc.folderPath || "Uncategorized";
@@ -259,7 +264,11 @@ function SmartMailboxComponent() {
         const node = getNodeFromPath(selectedPath.slice(0, i + 1), folderTree);
         if (node) {
              const children = Object.values(node.children).sort((a,b) => a.name.localeCompare(b.name));
-             const docs = node.documents.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+             const docs = node.documents.sort((a,b) => {
+                const dateA = a.createdAt instanceof Date ? a.createdAt : a.createdAt.toDate();
+                const dateB = b.createdAt instanceof Date ? b.createdAt : b.createdAt.toDate();
+                return dateB.getTime() - dateA.getTime()
+             });
              if (children.length > 0 || docs.length > 0) {
                  cols.push([...children, ...docs]);
              }
