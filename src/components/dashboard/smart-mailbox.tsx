@@ -28,6 +28,7 @@ import { DocumentPreview } from "./document-preview";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { Separator } from "../ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 
 interface TreeNode {
@@ -43,37 +44,38 @@ function RecentUploads({ documents, onSelect, selectedId }: { documents: Documen
     return (
         <div className="mt-8">
             <h3 className="mb-4 text-xl font-bold font-headline flex items-center gap-2"><Clock className="h-5 w-5" /> Recent Uploads</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {documents.map(doc => {
-                    const isPdf = doc.filename.toLowerCase().endsWith(".pdf");
-                    return (
-                        <button key={doc.id} onClick={() => onSelect(doc)} className={cn(
-                            "text-left rounded-lg overflow-hidden border transition-all hover:shadow-md",
-                            selectedId === doc.id ? "ring-2 ring-primary ring-offset-2" : "ring-0"
-                        )}>
-                            <Card className="h-full flex flex-col shadow-none border-none rounded-lg">
-                                <CardContent className="p-0">
-                                    <div className="relative aspect-[4/5] bg-muted">
-                                        {isPdf ? (
-                                            <div className="flex flex-col items-center justify-center h-full">
-                                                <FileText className="h-12 w-12 text-muted-foreground" />
-                                            </div>
-                                        ) : (
-                                            <Image src={doc.downloadUrl} alt={doc.filename} layout="fill" objectFit="cover" />
-                                        )}
-                                    </div>
-                                </CardContent>
-                                <CardHeader className="p-3 flex-grow">
-                                    <CardTitle className="text-sm font-semibold truncate">{doc.filename}</CardTitle>
-                                    <CardDescription className="text-xs">
-                                        {doc.createdAt ? formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true }) : ''}
-                                    </CardDescription>
-                                </CardHeader>
-                            </Card>
-                        </button>
-                    )
-                })}
-            </div>
+            <Card>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Path</TableHead>
+                            <TableHead className="text-right">Created</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {documents.map(doc => (
+                            <TableRow 
+                                key={doc.id} 
+                                onClick={() => onSelect(doc)}
+                                className={cn(
+                                    "cursor-pointer",
+                                    selectedId === doc.id && "bg-muted/50"
+                                )}
+                            >
+                                <TableCell className="font-medium flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    {doc.filename}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">{doc.folderPath}</TableCell>
+                                <TableCell className="text-right text-muted-foreground text-xs">
+                                    {doc.createdAt ? formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true }) : ''}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Card>
         </div>
     )
 }
@@ -146,7 +148,7 @@ export function SmartMailbox() {
       currentNode.documents.push(doc);
     });
     
-    return { folderTree: root, recentUploads: sortedDocs.slice(0, 5) };
+    return { folderTree: root, recentUploads: sortedDocs.slice(0, 10) };
   }, [documents]);
 
   const handleSelectPath = (path: string) => {
@@ -403,5 +405,3 @@ export function SmartMailbox() {
     </div>
   );
 }
-
-    
