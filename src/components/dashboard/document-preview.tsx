@@ -176,8 +176,7 @@ export function DocumentPreview({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <CalendarPlus className="mr-2 h-4 w-4" /> Add to
-                      Calendar
+                      Add to Google Calendar
                     </a>
                   </Button>
                   {document.event && document.event.events && index < document.event.events.length - 1 && (

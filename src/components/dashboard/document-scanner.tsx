@@ -554,10 +554,12 @@ export function DocumentScanner() {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <CalendarPlus className="mr-2 h-4 w-4" /> Add to
-                              Calendar
+                              Add to Google Calendar
                             </a>
                       </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        This event will be saved to your Lia calendar automatically.
+                      </p>
                       
                       {index < aiResult.events.length - 1 && <Separator className="my-4" />}
                     </div>
