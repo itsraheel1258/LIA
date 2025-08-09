@@ -3,6 +3,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Loader2,
   Sparkles,
@@ -57,6 +58,7 @@ type AiResult = GenerateSmartFilenameOutput & {
 
 export function DocumentScanner() {
   const { user, isFirebaseEnabled } = useAuth();
+  const router = useRouter();
   const [scannerState, setScannerState] = useState<ScannerState>("idle");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
@@ -203,7 +205,7 @@ export function DocumentScanner() {
         title: "Document Saved!",
         description: "Your document is now available in your Smart Mailbox.",
       });
-      handleReset();
+      router.push(`/dashboard/documents?doc=${result.documentId}`);
     } else {
       toast({
         variant: "destructive",

@@ -107,7 +107,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
         await file.makePublic();
         const downloadUrl = file.publicUrl();
 
-        await adminDb.collection("documents").add({
+        const docRef = await adminDb.collection("documents").add({
             userId: input.userId,
             filename: input.filename,
             folderPath: input.folderPath,
@@ -128,7 +128,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
 
         revalidatePath("/dashboard");
         revalidatePath("/dashboard/calendar");
-        return { success: true, downloadUrl };
+        return { success: true, documentId: docRef.id };
     } catch (error: any) {
         console.error("Error saving document:", error);
         if (error.code === 'storage/unauthorized' || error.code === 7) {

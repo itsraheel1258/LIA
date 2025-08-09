@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
@@ -80,8 +81,9 @@ function RecentUploads({ documents, onSelect, selectedId }: { documents: Documen
     )
 }
 
-export function SmartMailbox() {
+function SmartMailboxComponent() {
   const { user, isFirebaseEnabled, db } = useAuth();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,13 +117,28 @@ export function SmartMailbox() {
       });
       setDocuments(docs);
       setLoading(false);
+
+      // Check for docId from URL after documents have loaded
+      const docIdFromUrl = searchParams.get('doc');
+      if (docIdFromUrl) {
+        const foundDoc = docs.find(d => d.id === docIdFromUrl);
+        if (foundDoc) {
+          setSelectedDocument(foundDoc);
+          if (foundDoc.folderPath) {
+            setSelectedPath(foundDoc.folderPath.split('/'));
+          } else {
+            setSelectedPath(['Uncategorized']);
+          }
+        }
+      }
+
     }, (error) => {
         console.error("Error fetching documents: ", error);
         setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user, isFirebaseEnabled, db]);
+  }, [user, isFirebaseEnabled, db, searchParams]);
   
   const { folderTree, recentUploads } = useMemo(() => {
     const root: TreeNode = { name: "Root", path: "", children: {}, documents: [] };
@@ -404,4 +421,13 @@ export function SmartMailbox() {
       </AlertDialog>
     </div>
   );
+}
+
+
+export function SmartMailbox() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <SmartMailboxComponent />
+    </React.Suspense>
+  )
 }
