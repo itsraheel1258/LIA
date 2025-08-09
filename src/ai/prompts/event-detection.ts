@@ -34,6 +34,7 @@ export const eventDetectionPrompt = `You are an intelligent assistant specialize
 ⚠️ Important:
 - Use **ISO 8601 format** for all dates and times.
 - If a date is missing the year, assume the **current year**.
+- The event 'title' MUST be a maximum of 5 words.
 - Do **not hallucinate** any information. Only return what's clearly stated.
 - If no valid event is found, return:
 \`\`\`json

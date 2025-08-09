@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 // Import the initialized server-side Admin Firebase services
 import { adminDb, adminStorage } from "@/lib/firebase/server";
 import { detectEvent, type DetectEventOutput } from "@/ai/flows/detect-event";
+import type { CalendarEvent } from "@/lib/types";
 
 interface AnalyzeDocumentParams {
   dataUris: string[];
@@ -46,7 +47,7 @@ export async function analyzeDocumentAction({ dataUris, fileType }: Omit<Analyze
     }
     
     // Filter out any invalid events before returning
-    const validEvents = eventResult.events.filter(e => e.title && e.startDate && e.title !== 'No event found' && e.startDate !== 'No start date found');
+    const validEvents = eventResult.events.filter(e => e.title && e.startDate && e.title.toLowerCase() !== 'no event found' && e.startDate.toLowerCase() !== 'no start date found');
     
     return {
         success: true,
@@ -76,7 +77,7 @@ interface SaveDocumentInput {
     date?: string;
     category?: string;
   };
-  events: DetectEventOutput['events'];
+  events: CalendarEvent[];
 }
 
 export async function saveDocumentAction(input: SaveDocumentInput) {

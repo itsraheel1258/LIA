@@ -42,6 +42,7 @@ import { Label } from "../ui/label";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { Separator } from "../ui/separator";
+import type { CalendarEvent } from "@/lib/types";
 
 type ScannerState =
   | "idle"
@@ -51,7 +52,7 @@ type ScannerState =
   | "saving";
 type AiResult = GenerateSmartFilenameOutput & {
   finalDataUri: string;
-  events: DetectEventOutput["events"];
+  events: CalendarEvent[];
 };
 
 export function DocumentScanner() {

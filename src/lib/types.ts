@@ -1,5 +1,17 @@
 import type { Timestamp } from "firebase-admin/firestore";
-import type { DetectEventOutput } from "@/ai/flows/detect-event";
+
+// This is the new, more specific type for a single event.
+export interface CalendarEvent {
+  title: string;
+  startDate: string;
+  description?: string;
+}
+
+// This is the shape of the 'event' field within a Document, which contains an array of events.
+export interface DocumentEventData {
+  found: boolean;
+  events: CalendarEvent[];
+}
 
 export interface Document {
   id: string;
@@ -15,6 +27,6 @@ export interface Document {
     category?: string;
     summary?: string;
   };
-  event?: DetectEventOutput;
+  event?: DocumentEventData; // This now uses the more detailed type
   createdAt: Timestamp | Date;
 }
