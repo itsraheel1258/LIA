@@ -73,6 +73,7 @@ interface SaveDocumentInput {
     date?: string;
     category?: string;
   };
+  events: DetectEventOutput['events'];
 }
 
 export async function saveDocumentAction(input: SaveDocumentInput) {
@@ -112,10 +113,16 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
                 ...input.metadata,
                 summary: input.summary,
             },
+            // Save the event data to firestore. If there are events, `found` will be true.
+            event: {
+              events: input.events,
+              found: input.events && input.events.length > 0
+            },
             createdAt: new Date(), // Use server-side timestamp
         });
 
         revalidatePath("/dashboard");
+        revalidatePath("/dashboard/calendar");
         return { success: true, downloadUrl };
     } catch (error: any) {
         console.error("Error saving document:", error);

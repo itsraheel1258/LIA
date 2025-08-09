@@ -8,14 +8,24 @@ import type { Document } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, FileText, Loader2, AlertTriangle, Inbox } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+
+type CalendarEvent = {
+  id: string;
+  title: string;
+  startDate: Date;
+  description?: string;
+  documentId: string;
+}
 
 export default function CalendarPage() {
   const { user, isFirebaseEnabled, db } = useAuth();
-  const [events, setEvents] = useState<Document[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
@@ -26,24 +36,32 @@ export default function CalendarPage() {
     }
     
     setLoading(true);
+    // Query documents that have events associated with them.
     const q = query(
         collection(db, "documents"), 
         where("userId", "==", user.uid),
-        where("event.found", "==", true), // Only fetch documents with events
-        orderBy("event.startDate", "asc")
+        where("event.found", "==", true),
+        orderBy("createdAt", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const docs: Document[] = [];
+      const allEvents: CalendarEvent[] = [];
       querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        docs.push({
-          id: doc.id,
-          ...data,
-          createdAt: (data.createdAt as Timestamp)?.toDate() 
-        } as Document);
+        const data = doc.data() as Document;
+        // A single document can have multiple events.
+        if (data.event && data.event.events) {
+            data.event.events.forEach(event => {
+                allEvents.push({
+                    id: `${doc.id}-${event.title}`,
+                    title: event.title,
+                    startDate: parseISO(event.startDate),
+                    description: event.description || undefined,
+                    documentId: doc.id,
+                });
+            });
+        }
       });
-      setEvents(docs);
+      setEvents(allEvents);
       setLoading(false);
     }, (error) => {
         console.error("Error fetching events: ", error);
@@ -54,12 +72,12 @@ export default function CalendarPage() {
   }, [user, isFirebaseEnabled, db]);
 
   const eventDays = useMemo(() => {
-    return events.map(event => new Date(event.event!.startDate!));
+    return events.map(event => event.startDate);
   }, [events]);
 
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
-    return events.filter(event => isSameDay(new Date(event.event!.startDate!), selectedDate));
+    return events.filter(event => isSameDay(event.startDate, selectedDate));
   }, [events, selectedDate]);
 
 
@@ -137,10 +155,10 @@ export default function CalendarPage() {
                         <ul className="space-y-3">
                             {selectedDayEvents.map(event => (
                                 <li key={event.id} className="p-3 rounded-md border bg-muted/20">
-                                    <p className="font-semibold text-sm">{event.event?.title}</p>
-                                    <p className="text-xs text-muted-foreground">{event.event?.description}</p>
+                                    <p className="font-semibold text-sm">{event.title}</p>
+                                    <p className="text-xs text-muted-foreground">{event.description}</p>
                                     <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1">
-                                        <a href={`/dashboard/documents?doc=${event.id}`} target="_blank" rel="noopener noreferrer">View Document</a>
+                                        <a href={`/dashboard/documents?doc=${event.documentId}`} target="_blank" rel="noopener noreferrer">View Document</a>
                                     </Button>
                                 </li>
                             ))}

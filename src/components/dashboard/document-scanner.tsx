@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef } from "react";
@@ -39,7 +40,8 @@ import {
 } from "@/components/ui/carousel";
 import { Label } from "../ui/label";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { Separator } from "../ui/separator";
 
 type ScannerState =
   | "idle"
@@ -49,14 +51,7 @@ type ScannerState =
   | "saving";
 type AiResult = GenerateSmartFilenameOutput & {
   finalDataUri: string;
-  events: Array<{
-    title: string;
-    startDate: string;
-    endDate: string | null;
-    startTime: string | null;
-    location: string | null;
-    description: string | null;
-  }>;
+  events: DetectEventOutput["events"];
 };
 
 export function DocumentScanner() {
@@ -199,6 +194,7 @@ export function DocumentScanner() {
       folderPath,
       summary,
       metadata: aiResult.metadata,
+      events: aiResult.events, // Pass the events to the save action
     });
 
     if (result.success) {
@@ -220,25 +216,17 @@ export function DocumentScanner() {
   const createGoogleCalendarLink = (event: {
     title: string;
     startDate: string;
-    endDate: string | null;
-    startTime: string | null;
-    location: string | null;
-    description: string | null;
+    description?: string | null;
   }) => {
     if (!event.startDate || !event.title) return "";
 
     const formatDateForGoogle = (dateStr: string) => {
       try {
-        // Try to parse the date string
         const date = new Date(dateStr);
-        
-        // Check if the date is valid
         if (isNaN(date.getTime())) {
           console.warn(`Invalid date string: ${dateStr}`);
           return "";
         }
-        
-        // Removes dashes, colons, and milliseconds from ISO string, then adds 'Z' for UTC
         return date.toISOString().replace(/[-:]|\.\d{3}/g, "");
       } catch (error) {
         console.warn(`Error formatting date: ${dateStr}`, error);
@@ -252,12 +240,7 @@ export function DocumentScanner() {
       return "";
     }
     
-    // If no end date, make it same as start date
-    const end = event.endDate ? formatDateForGoogle(event.endDate) : start;
-    if (!end) {
-      console.warn("Could not format end date for Google Calendar link");
-      return "";
-    }
+    const end = start;
 
     const url = new URL("https://www.google.com/calendar/render");
     url.searchParams.append("action", "TEMPLATE");
@@ -265,7 +248,6 @@ export function DocumentScanner() {
     url.searchParams.append("dates", `${start}/${end}`);
     if (event.description)
       url.searchParams.append("details", event.description);
-    if (event.location) url.searchParams.append("location", event.location);
 
     return url.toString();
   };
@@ -548,48 +530,36 @@ export function DocumentScanner() {
               </div>
             </div>
 
-            {aiResult.events.length > 0 && (
+            {aiResult.events && aiResult.events.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg font-headline flex items-center gap-2">
-                    <CalendarPlus /> Detected Event
+                    <CalendarPlus /> Detected Events
                   </CardTitle>
                 </CardHeader>
-
-                <CardContent className="text-sm space-y-3">
+                <CardContent className="text-sm space-y-4">
                   {aiResult.events.map((event, index) => (
                     <div key={index}>
-                      <p>
-                        <strong>Title:</strong> {event.title}
-                      </p>
-                      <p>
-                        <strong>Starts:</strong> {event.startDate}
-                      </p>
+                      <div className="font-semibold">{event.title}</div>
+                      <div className="text-muted-foreground">
+                        {format(parseISO(event.startDate), "PPP p")}
+                      </div>
                       {event.description && (
-                        <p>
-                          <strong>Description:</strong> {event.description}
-                        </p>
+                        <p className="mt-1 text-xs">{event.description}</p>
                       )}
-
-                      {(() => {
-                        const calendarLink = createGoogleCalendarLink(event);
-                        return calendarLink ? (
-                          <Button asChild variant="outline" size="sm">
+                      
+                      <Button asChild variant="outline" size="sm" className="mt-2">
                             <a
-                              href={calendarLink}
+                              href={createGoogleCalendarLink(event)}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
                               <CalendarPlus className="mr-2 h-4 w-4" /> Add to
                               Calendar
                             </a>
-                          </Button>
-                        ) : (
-                          <Button variant="outline" size="sm" disabled>
-                            <CalendarPlus className="mr-2 h-4 w-4" /> No Event
-                          </Button>
-                        );
-                      })()}
+                      </Button>
+                      
+                      {index < aiResult.events.length - 1 && <Separator className="my-4" />}
                     </div>
                   ))}
                 </CardContent>
