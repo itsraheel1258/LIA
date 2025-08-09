@@ -57,7 +57,6 @@ export default function CalendarPage() {
         collection(db, "documents"), 
         where("userId", "==", user.uid),
         where("event.events", "!=", []),
-        orderBy("event.events"),
         orderBy("createdAt", "desc")
     );
 
