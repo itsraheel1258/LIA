@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
-import type { DetectEventOutput } from "@/ai/flows/detect-event";
+import type { DetectEventOutput } from "@/Schema/detecteventSchema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "../ui/textarea";
@@ -61,7 +61,7 @@ export function DocumentScanner() {
   const router = useRouter();
   const [scannerState, setScannerState] = useState<ScannerState>("idle");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [fileType, setFileType] = useState<"image" | "pdf" | null>(null);
+  const [fileType, setFileType] = useState<"image" | "pdf" | "word" | null>(null);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const { toast } = useToast();
 
@@ -70,7 +70,8 @@ export function DocumentScanner() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      if (files[0].type.startsWith("image/")) {
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
         if (files.length > 1) {
           toast({
             title: `${files.length} pages loaded.`,
@@ -91,7 +92,7 @@ export function DocumentScanner() {
           setImagePreviews((previews) => [...previews, ...newPreviews]);
           setScannerState("capturing");
         });
-      } else if (files[0].type === "application/pdf") {
+      } else if (file.type === "application/pdf") {
         if (imagePreviews.length > 0 || files.length > 1) {
           toast({
             variant: "destructive",
@@ -105,12 +106,28 @@ export function DocumentScanner() {
           setImagePreviews([reader.result as string]);
           setScannerState("capturing");
         };
-        reader.readAsDataURL(files[0]);
-      } else {
+        reader.readAsDataURL(file);
+      } else if (file.type === "application/msword" || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+         if (imagePreviews.length > 0 || files.length > 1) {
+          toast({
+            variant: "destructive",
+            title: "Mixing file types is not allowed.",
+          });
+          return;
+        }
+        setFileType("word");
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews([reader.result as string]);
+          setScannerState("capturing");
+        };
+        reader.readAsDataURL(file);
+      }
+      else {
         toast({
           variant: "destructive",
           title: "Unsupported File Type",
-          description: "Please upload an image or a PDF file.",
+          description: "Please upload an image, PDF, or Word document.",
         });
         return;
       }
@@ -263,11 +280,11 @@ export function DocumentScanner() {
       scannerState === "reviewing" || scannerState === "saving";
     let src = imagePreviews;
 
-    if (isReviewingOrSaving && fileType === "pdf" && aiResult?.finalDataUri) {
+    if (isReviewingOrSaving && (fileType === "pdf" || fileType === "word") && aiResult?.finalDataUri) {
       return (
         <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
           <FileText className="h-24 w-24 text-primary" />
-          <p className="mt-4 text-sm text-muted-foreground">PDF Document</p>
+          <p className="mt-4 text-sm text-muted-foreground">{fileType === 'pdf' ? 'PDF Document' : 'Word Document'}</p>
         </div>
       );
     }
@@ -279,12 +296,12 @@ export function DocumentScanner() {
 
     if (src.length === 0) return null;
 
-    if (fileType === "pdf" && !isReviewingOrSaving) {
+    if ((fileType === "pdf" || fileType === "word") && !isReviewingOrSaving) {
       return (
         <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
           <FileText className="h-24 w-24 text-primary" />
           <p className="mt-4 text-sm text-muted-foreground">
-            PDF Document Ready for Analysis
+            {fileType === 'pdf' ? 'PDF' : 'Word'} Document Ready for Analysis
           </p>
         </div>
       );
@@ -359,6 +376,8 @@ export function DocumentScanner() {
       case "capturing": {
         if (fileType === "pdf")
           return "Your PDF is ready. Lia will automatically detect any events or tasks.";
+        if (fileType === "word")
+          return "Your Word document is ready. Lia will automatically detect any events or tasks.";
         return `${imagePreviews.length} page(s) loaded. Add more pages or let Lia work her magic! Lia will automatically detect any events or tasks.`;
       }
       case "processing":
@@ -398,13 +417,13 @@ export function DocumentScanner() {
               name="file-upload"
               type="file"
               className="sr-only"
-              accept="image/*,application/pdf"
+              accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               ref={fileInputRef}
               onChange={handleFileChange}
               multiple={true}
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Accepts images and PDFs. You can also take photos.
+              Accepts images, PDFs, and Word documents. You can also take photos.
             </p>
           </div>
         )}

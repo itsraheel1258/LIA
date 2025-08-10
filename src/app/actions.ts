@@ -14,7 +14,7 @@ import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 
 interface AnalyzeDocumentParams {
   dataUris: string[];
-  fileType: "image" | "pdf";
+  fileType: "image" | "pdf" | "word";
 }
 
 // Overload signatures
@@ -41,7 +41,7 @@ export async function analyzeDocumentAction(
 
     if (fileType === 'image') {
       analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
-    } else { // PDF
+    } else { // PDF or Word
       textContent = await extractText({ dataUri: finalDataUri });
       analysisResult = await summarizeText({ textContent });
     }
