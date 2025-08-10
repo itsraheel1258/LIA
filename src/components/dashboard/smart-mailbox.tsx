@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download, Loader2, Clock } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download, Loader2, Clock, ArrowLeft } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
@@ -91,6 +91,14 @@ function SmartMailboxComponent() {
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null);
   const [docToDelete, setDocToDelete] = useState<DocumentType | null>(null);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobileView(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (!user || !isFirebaseEnabled || !db) {
@@ -312,20 +320,89 @@ function SmartMailboxComponent() {
   const isNode = (item: any): item is TreeNode => 'children' in item;
 
   const Breadcrumbs = () => (
-    <nav className="flex items-center text-sm text-muted-foreground p-2 border-b">
-        <button onClick={() => handleBreadcrumbClick(-1)} className="flex items-center gap-1 hover:text-primary">
-            <Home className="h-4 w-4" />
-        </button>
-        {selectedPath.map((part, index) => (
-            <div key={index} className="flex items-center">
-                <ChevronRight className="h-4 w-4 mx-1" />
-                <button onClick={() => handleBreadcrumbClick(index)} className="hover:text-primary truncate max-w-[150px]">
-                    {part}
-                </button>
+    <div className="flex items-center justify-between p-2 border-b">
+        <nav className="flex items-center text-sm text-muted-foreground">
+            <button onClick={() => handleBreadcrumbClick(-1)} className="flex items-center gap-1 hover:text-primary">
+                <Home className="h-4 w-4" />
+            </button>
+            {selectedPath.map((part, index) => (
+                <div key={index} className="flex items-center">
+                    <ChevronRight className="h-4 w-4 mx-1" />
+                    <button onClick={() => handleBreadcrumbClick(index)} className="hover:text-primary truncate max-w-[150px]">
+                        {part}
+                    </button>
+                </div>
+            ))}
+        </nav>
+        {isMobileView && selectedDocument && (
+          <Button variant="ghost" size="sm" onClick={() => setSelectedDocument(null)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        )}
+    </div>
+  );
+
+  const fileBrowserView = (
+    <div className="flex flex-row overflow-x-auto h-full">
+        {columns.map((columnItems, colIndex) => (
+            <div key={colIndex} className="flex-shrink-0 w-full md:w-64 border-b md:border-b-0 md:border-r border-border last:border-r-0">
+                <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
+                    {columnItems.map((item, itemIndex) => {
+                        if (isNode(item)) {
+                            const isSelected = selectedPath[colIndex] === item.name;
+                            return (
+                                <li key={item.path} className="rounded-md text-sm hover:bg-muted/50">
+                                    <button
+                                        onClick={() => handleSelectPath(item.path)}
+                                        className={cn(
+                                            "w-full text-left flex items-center justify-between p-2",
+                                            isSelected ? "bg-primary/10 text-primary font-semibold" : ""
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2 truncate">
+                                            <Folder className="h-5 w-5 flex-shrink-0" />
+                                            <span className="truncate">{item.name}</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
+                                    </button>
+                                </li>
+                            )
+                        } else {
+                            const isSelected = selectedDocument?.id === item.id;
+                            return (
+                                <li key={item.id} className="rounded-md text-sm hover:bg-muted/50">
+                                    <button 
+                                      onClick={() => handleSelectDocument(item)}
+                                      className={cn(
+                                        "flex items-center w-full p-2 text-left",
+                                        isSelected ? "bg-primary/10 text-primary font-semibold" : ""
+                                      )}
+                                    >
+                                        <FileText className="h-5 w-5 flex-shrink-0" />
+                                        <span className="truncate ml-2 flex-grow">{item.filename}</span>
+                                    </button>
+                                </li>
+                            )
+                        }
+                    })}
+                </ul>
             </div>
         ))}
-    </nav>
+    </div>
   );
+  
+  const documentPreviewView = selectedDocument && (
+     <div className="flex-grow md:border-l overflow-y-auto">
+        <DocumentPreview 
+            document={selectedDocument} 
+            onDownload={handleDownload}
+            onDelete={setDocToDelete}
+            isDownloading={downloadingDocId === selectedDocument.id}
+        />
+    </div>
+  );
+
 
   return (
     <div>
@@ -336,62 +413,14 @@ function SmartMailboxComponent() {
             <Card className="min-h-[600px] bg-card text-card-foreground flex flex-col">
                 <Breadcrumbs />
                 <CardContent className="p-0 h-full overflow-hidden flex-grow">
-                    <div className="flex flex-col md:flex-row h-full w-full">
-                        <div className="flex flex-row overflow-x-auto h-full">
-                            {columns.map((columnItems, colIndex) => (
-                                <div key={colIndex} className="flex-shrink-0 w-full md:w-64 border-b md:border-b-0 md:border-r border-border last:border-r-0">
-                                    <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
-                                        {columnItems.map((item, itemIndex) => {
-                                            if (isNode(item)) {
-                                                const isSelected = selectedPath[colIndex] === item.name;
-                                                return (
-                                                    <li key={item.path} className="rounded-md text-sm hover:bg-muted/50">
-                                                        <button
-                                                            onClick={() => handleSelectPath(item.path)}
-                                                            className={cn(
-                                                                "w-full text-left flex items-center justify-between p-2",
-                                                                isSelected ? "bg-primary/10 text-primary font-semibold" : ""
-                                                            )}
-                                                        >
-                                                            <div className="flex items-center gap-2 truncate">
-                                                                <Folder className="h-5 w-5 flex-shrink-0" />
-                                                                <span className="truncate">{item.name}</span>
-                                                            </div>
-                                                            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                                        </button>
-                                                    </li>
-                                                )
-                                            } else {
-                                                const isSelected = selectedDocument?.id === item.id;
-                                                return (
-                                                    <li key={item.id} className="rounded-md text-sm hover:bg-muted/50">
-                                                        <button 
-                                                          onClick={() => handleSelectDocument(item)}
-                                                          className={cn(
-                                                            "flex items-center w-full p-2 text-left",
-                                                            isSelected ? "bg-primary/10 text-primary font-semibold" : ""
-                                                          )}
-                                                        >
-                                                            <FileText className="h-5 w-5 flex-shrink-0" />
-                                                            <span className="truncate ml-2 flex-grow">{item.filename}</span>
-                                                        </button>
-                                                    </li>
-                                                )
-                                            }
-                                        })}
-                                    </ul>
-                                </div>
-                            ))}
-                        </div>
-                         {selectedDocument && (
-                            <div className="flex-grow border-l overflow-y-auto">
-                                <DocumentPreview 
-                                    document={selectedDocument} 
-                                    onDownload={handleDownload}
-                                    onDelete={setDocToDelete}
-                                    isDownloading={downloadingDocId === selectedDocument.id}
-                                />
-                            </div>
+                    <div className="md:flex md:flex-row h-full w-full">
+                        {isMobileView ? (
+                            selectedDocument ? documentPreviewView : fileBrowserView
+                        ) : (
+                            <>
+                                {fileBrowserView}
+                                {documentPreviewView}
+                            </>
                         )}
                     </div>
                 </CardContent>
@@ -440,3 +469,5 @@ export function SmartMailbox() {
     </React.Suspense>
   )
 }
+
+    
