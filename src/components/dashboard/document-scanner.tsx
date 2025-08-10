@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -135,22 +135,21 @@ export function DocumentScanner() {
     setScannerState("processing");
 
     try {
-      // Event detection is now on by default
       const result = await analyzeDocumentAction({
         dataUris: imagePreviews,
         fileType,
         detectEvents: true,
       });
-      if (result.success && result.data) {
+
+      if (result && result.success && result.data) {
         setAiResult(result.data as AiResult);
         setScannerState("reviewing");
-        console.log("Response", result.data);
       } else {
         toast({
           variant: "destructive",
           title: "Analysis Failed",
           description:
-            result.error ||
+            (result && result.error) ||
             "Lia could not understand this document. Please check your Gemini API key.",
         });
         setScannerState("capturing");

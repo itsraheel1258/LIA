@@ -10,38 +10,53 @@ import { adminDb, adminStorage } from "@/lib/firebase/server";
 import { detectEvent } from "@/ai/flows/detect-event";
 import type { DetectEventOutput } from "@/Schema/detecteventSchema";
 import type { CalendarEvent } from "@/lib/types";
+import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 
 interface AnalyzeDocumentParams {
   dataUris: string[];
   fileType: "image" | "pdf";
-  detectEvents: boolean;
 }
 
-export async function analyzeDocumentAction({ dataUris, fileType }: Omit<AnalyzeDocumentParams, 'detectEvents'> & { detectEvents: true }) {
+// Overload signatures
+export async function analyzeDocumentAction(
+  params: AnalyzeDocumentParams & { detectEvents: true }
+): Promise<{ success: true; data: GenerateSmartFilenameOutput & { finalDataUri: string, events: CalendarEvent[] } } | { success: false, error: string }>;
+
+export async function analyzeDocumentAction(
+  params: AnalyzeDocumentParams & { detectEvents: false }
+): Promise<{ success: true; data: GenerateSmartFilenameOutput & { finalDataUri: string } } | { success: false, error: string }>;
+
+// Combined implementation
+export async function analyzeDocumentAction(
+  params: AnalyzeDocumentParams & { detectEvents: boolean }
+): Promise<any> {
   try {
+    const { dataUris, fileType, detectEvents } = params;
     let analysisResult;
     let finalDataUri: string;
     let textContent: string | undefined;
-    let eventResult: DetectEventOutput = { events: []  };
 
-    // The first image is always used for analysis. For saving, we also just use the first image.
-    finalDataUri = dataUris[0]; 
+    // The first image is always used for analysis and saving.
+    finalDataUri = dataUris[0];
 
-    // Step 1: Handle images or extract text from PDF
     if (fileType === 'image') {
-       analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
-       eventResult = await detectEvent({ photoDataUri: finalDataUri, summary: analysisResult.summary });
-
+      analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
     } else { // PDF
       textContent = await extractText({ dataUri: finalDataUri });
-      analysisResult = await summarizeText({ textContent: textContent! });
-      eventResult = await detectEvent({ textContent: textContent!, summary: analysisResult.summary });
+      analysisResult = await summarizeText({ textContent });
     }
-    
-    // Filter out any invalid events before returning
-    const validEvents = eventResult.events.filter(e => e.title && e.startDate && e.title.toLowerCase() !== 'no event found' && e.startDate.toLowerCase() !== 'no start date found');
-    
-    return {
+
+    if (detectEvents) {
+      let eventResult: DetectEventOutput = { events: [] };
+      if (fileType === 'image') {
+        eventResult = await detectEvent({ photoDataUri: finalDataUri, summary: analysisResult.summary });
+      } else {
+        eventResult = await detectEvent({ textContent: textContent!, summary: analysisResult.summary });
+      }
+      
+      const validEvents = eventResult.events.filter(e => e.title && e.startDate && e.title.toLowerCase() !== 'no event found' && e.startDate.toLowerCase() !== 'no start date found');
+      
+      return {
         success: true,
         data: {
           ...analysisResult,
@@ -49,7 +64,15 @@ export async function analyzeDocumentAction({ dataUris, fileType }: Omit<Analyze
           events: validEvents,
         },
       };
-      
+    }
+
+    return {
+      success: true,
+      data: {
+        ...analysisResult,
+        finalDataUri,
+      },
+    };
 
   } catch (error: any) {
     console.error("Error analyzing document:", error);
