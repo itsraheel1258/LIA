@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
-import type { Document } from "@/lib/types";
+import type { Document, CalendarEvent as CalendarEventType } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, Loader2, AlertTriangle, Inbox } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,6 +19,7 @@ type CalendarEvent = {
   id: string;
   title: string;
   startDate: Date;
+  endDate?: Date;
   description?: string;
   documentId: string;
 }
@@ -50,11 +51,12 @@ export default function CalendarPage() {
         const data = doc.data() as Document;
         // A single document can have multiple events.
         if (data.event && data.event.events) {
-            data.event.events.forEach(event => {
+            data.event.events.forEach((event: CalendarEventType) => {
                 allEvents.push({
                     id: `${doc.id}-${event.title}`,
                     title: event.title,
                     startDate: parseISO(event.startDate),
+                    endDate: event.endDate ? parseISO(event.endDate) : undefined,
                     description: event.description || undefined,
                     documentId: doc.id,
                 });
@@ -79,6 +81,13 @@ export default function CalendarPage() {
     if (!selectedDate) return [];
     return events.filter(event => isSameDay(event.startDate, selectedDate));
   }, [events, selectedDate]);
+
+  const formatEventTime = (start: Date, end: Date | undefined) => {
+    if (end) {
+        return `${format(start, 'p')} - ${format(end, 'p')}`;
+    }
+    return format(start, 'p');
+  }
 
   if (!isFirebaseEnabled) {
     return (
@@ -158,8 +167,8 @@ export default function CalendarPage() {
                             {selectedDayEvents.map(event => (
                                 <li key={event.id} className="p-3 rounded-md border bg-muted/20">
                                     <p className="font-semibold text-sm">{event.title}</p>
-
-                                    <p className="text-xs text-muted-foreground">{event.description}</p>
+                                     <p className="text-xs text-muted-foreground">{formatEventTime(event.startDate, event.endDate)}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{event.description}</p>
                                     <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1">
                                         <Link href={`/dashboard/documents?doc=${event.documentId}`}>View Document</Link>
                                     </Button>

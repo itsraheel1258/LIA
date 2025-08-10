@@ -32,7 +32,7 @@ export async function analyzeDocumentAction(
 ): Promise<any> {
   try {
     const { dataUris, fileType, detectEvents } = params;
-    let analysisResult;
+    let analysisResult: GenerateSmartFilenameOutput;
     let finalDataUri: string;
     let textContent: string | undefined;
 

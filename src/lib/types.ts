@@ -4,6 +4,7 @@ import type { Timestamp } from "firebase-admin/firestore";
 export interface CalendarEvent {
   title: string;
   startDate: string;
+  endDate?: string;
   description?: string;
 }
 

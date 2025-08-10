@@ -28,7 +28,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
-import type { DetectEventOutput } from "@/Schema/detecteventSchema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "../ui/textarea";
@@ -221,6 +220,7 @@ export function DocumentScanner() {
         title: "Document Saved!",
         description: "Your document is now available in your Smart Mailbox.",
       });
+      handleReset();
       router.push(`/dashboard/documents?doc=${result.documentId}`);
     } else {
       toast({
@@ -232,11 +232,7 @@ export function DocumentScanner() {
     }
   };
 
-  const createGoogleCalendarLink = (event: {
-    title: string;
-    startDate: string;
-    description?: string | null;
-  }) => {
+  const createGoogleCalendarLink = (event: CalendarEvent) => {
     if (!event.startDate || !event.title) return "";
 
     const formatDateForGoogle = (dateStr: string) => {
@@ -259,7 +255,7 @@ export function DocumentScanner() {
       return "";
     }
     
-    const end = start;
+    const end = event.endDate ? formatDateForGoogle(event.endDate) : start;
 
     const url = new URL("https://www.google.com/calendar/render");
     url.searchParams.append("action", "TEMPLATE");
@@ -274,6 +270,18 @@ export function DocumentScanner() {
 
     return url.toString();
   };
+  
+  const formatEventTime = (start: string, end: string | undefined) => {
+    const startDate = parseISO(start);
+    if (end) {
+        const endDate = parseISO(end);
+        if (format(startDate, 'PPP') === format(endDate, 'PPP')) {
+            return `${format(startDate, 'PPP')} @ ${format(startDate, 'p')} - ${format(endDate, 'p')}`;
+        }
+        return `${format(startDate, 'PPP p')} - ${format(endDate, 'PPP p')}`;
+    }
+    return format(startDate, "PPP p");
+  }
 
   const renderPreview = () => {
     const isReviewingOrSaving =
@@ -567,7 +575,7 @@ export function DocumentScanner() {
                     <div key={index}>
                       <div className="font-semibold">{event.title}</div>
                       <div className="text-muted-foreground">
-                        {format(parseISO(event.startDate), "PPP p")}
+                        {formatEventTime(event.startDate, event.endDate)}
                       </div>
                       {event.description && (
                         <p className="mt-1 text-xs">{event.description}</p>

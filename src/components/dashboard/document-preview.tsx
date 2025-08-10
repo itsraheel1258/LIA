@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { Document as DocumentType } from "@/lib/types";
+import { Document as DocumentType, CalendarEvent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,14 +40,10 @@ export function DocumentPreview({
 }: DocumentPreviewProps) {
   const isPdf = document.filename.toLowerCase().endsWith(".pdf");
 
-  const createGoogleCalendarLink = (event: {
-    title: string;
-    startDate: string;
-    description?: string | null;
-  }) => {
+  const createGoogleCalendarLink = (event: CalendarEvent) => {
     if (!event.startDate || !event.title) return "";
     const start = new Date(event.startDate).toISOString().replace(/[-:]|\.\d{3}/g, "");
-    const end = start; 
+    const end = event.endDate ? new Date(event.endDate).toISOString().replace(/[-:]|\.\d{3}/g, "") : start; 
     const url = new URL("https://www.google.com/calendar/render");
     url.searchParams.append("action", "TEMPLATE");
     url.searchParams.append("text", event.title);
@@ -60,6 +56,18 @@ export function DocumentPreview({
     url.searchParams.append("details", details);
     return url.toString();
   };
+  
+  const formatEventTime = (start: string, end: string | undefined) => {
+    const startDate = parseISO(start);
+    if (end) {
+        const endDate = parseISO(end);
+        if (format(startDate, 'PPP') === format(endDate, 'PPP')) {
+            return `${format(startDate, 'PPP')} @ ${format(startDate, 'p')} - ${format(endDate, 'p')}`;
+        }
+        return `${format(startDate, 'PPP p')} - ${format(endDate, 'PPP p')}`;
+    }
+    return format(startDate, "PPP p");
+  }
 
   return (
     <div className="p-4 sm:p-6 h-full flex flex-col">
@@ -164,7 +172,7 @@ export function DocumentPreview({
                 <div key={index}>
                   <div className="font-semibold">{event.title}</div>
                   <div className="text-muted-foreground">
-                    {format(parseISO(event.startDate), "PPP p")}
+                     {formatEventTime(event.startDate, event.endDate)}
                   </div>
                   {event.description && (
                     <p className="mt-1 text-xs">{event.description}</p>
