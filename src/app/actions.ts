@@ -61,7 +61,7 @@ export async function analyzeDocumentAction(
         data: {
           ...analysisResult,
           finalDataUri,
-          events: validEvents,
+          events: validEvents.map(e => ({ ...e, description: e.description || analysisResult.summary })),
         },
       };
     }
