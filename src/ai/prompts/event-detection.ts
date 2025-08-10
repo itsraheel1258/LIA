@@ -34,7 +34,8 @@ export const eventDetectionPrompt = `You are an intelligent assistant specialize
 
 ⚠️ Important:
 - Use **ISO 8601 format** for all dates and times.
-- If a date is missing the year, assume the **current year**. If the date has already passed in the current year, assume the **next calendar year**.
+- If a date is missing the year, assume the **current year**.
+- **CRITICAL RULE**: If a date is found without a year, and that date has **already passed** in the current calendar year, you **MUST** assume the event occurs in the **following calendar year**. For example, if today is October 2024 and the document says "August 16th", the year must be 2025.
 - The event 'title' MUST be a maximum of 5 words.
 - Do **not hallucinate** any information. Only return what's clearly stated.
 - If no valid event is found, return:
