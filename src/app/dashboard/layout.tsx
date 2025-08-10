@@ -51,7 +51,7 @@ export default function DashboardLayout({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
-               <DashboardSidebar />
+               <DashboardSidebar onLinkClick={() => setIsSidebarOpen(false)} />
             </SheetContent>
           </Sheet>
         </PageHeader>

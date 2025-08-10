@@ -16,11 +16,21 @@ const navItems = [
     { href: "/dashboard/trash", label: "Trash", icon: Trash2 },
 ];
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+    onLinkClick?: () => void;
+}
+
+export function DashboardSidebar({ onLinkClick }: DashboardSidebarProps) {
     const pathname = usePathname();
     const storageUsed = 0.08;
     const storageTotal = 15.0;
     const storagePercentage = (storageUsed / storageTotal) * 100;
+
+    const handleLinkClick = () => {
+        if (onLinkClick) {
+            onLinkClick();
+        }
+    }
 
     return (
         <div className="flex h-full max-h-screen flex-col gap-2">
@@ -35,6 +45,7 @@ export function DashboardSidebar() {
                         <Link
                             key={item.label}
                             href={item.href}
+                            onClick={handleLinkClick}
                             className={cn(
                                 "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
                                 pathname === item.href && "bg-primary/10 text-primary"
