@@ -93,7 +93,7 @@ function SmartMailboxComponent() {
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
 
-  const searchTerm = searchParams.get('search');
+  const searchTerm = searchParams.get('search') || '';
 
   useEffect(() => {
     const checkMobile = () => setIsMobileView(window.innerWidth < 768);
@@ -364,51 +364,67 @@ function SmartMailboxComponent() {
   );
 
   const fileBrowserView = (
-    <div className="flex flex-col md:flex-row overflow-x-auto h-full">
+    <div className="flex flex-row overflow-x-auto h-full">
+      {/* Desktop: Show all columns */}
+      <div className="hidden md:flex flex-row h-full">
         {columns.map((columnItems, colIndex) => (
-            <div key={colIndex} className="flex-shrink-0 w-full md:w-64 border-b md:border-b-0 md:border-r border-border last:border-r-0">
+            <div key={colIndex} className="flex-shrink-0 w-64 border-r border-border last:border-r-0">
                 <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
-                    {columnItems.map((item, itemIndex) => {
-                        if (isNode(item)) {
-                            const isSelected = selectedPath[colIndex] === item.name;
-                            return (
-                                <li key={item.path} className="rounded-md text-sm hover:bg-muted/50">
-                                    <button
-                                        onClick={() => handleSelectPath(item.path)}
-                                        className={cn(
-                                            "w-full text-left flex items-center justify-between p-2",
-                                            isSelected ? "bg-primary/10 text-primary font-semibold" : ""
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-2 truncate">
-                                            <Folder className="h-5 w-5 flex-shrink-0" />
-                                            <span className="truncate">{item.name}</span>
-                                        </div>
-                                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                    </button>
-                                </li>
-                            )
-                        } else {
-                            const isSelected = selectedDocument?.id === item.id;
-                            return (
-                                <li key={item.id} className="rounded-md text-sm hover:bg-muted/50">
-                                    <button 
-                                      onClick={() => handleSelectDocument(item)}
-                                      className={cn(
-                                        "flex items-center w-full p-2 text-left",
-                                        isSelected ? "bg-primary/10 text-primary font-semibold" : ""
-                                      )}
-                                    >
-                                        <FileText className="h-5 w-5 flex-shrink-0" />
-                                        <span className="truncate ml-2 flex-grow">{item.filename}</span>
-                                    </button>
-                                </li>
-                            )
-                        }
+                    {columnItems.map((item) => {
+                        const isSelectedNode = isNode(item) && selectedPath[colIndex] === item.name;
+                        const isSelectedDoc = !isNode(item) && selectedDocument?.id === item.id;
+                        return (
+                          <li key={isNode(item) ? item.path : item.id} className="rounded-md text-sm hover:bg-muted/50">
+                            <button
+                                onClick={() => isNode(item) ? handleSelectPath(item.path) : handleSelectDocument(item)}
+                                className={cn(
+                                    "w-full text-left flex items-center justify-between p-2",
+                                    (isSelectedNode || isSelectedDoc) ? "bg-primary/10 text-primary font-semibold" : ""
+                                )}
+                            >
+                                <div className="flex items-center gap-2 truncate">
+                                    {isNode(item) ? <Folder className="h-5 w-5 flex-shrink-0" /> : <FileText className="h-5 w-5 flex-shrink-0" />}
+                                    <span className="truncate">{item.name || (item as DocumentType).filename}</span>
+                                </div>
+                                {isNode(item) && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}
+                            </button>
+                        </li>
+                        )
                     })}
                 </ul>
             </div>
         ))}
+      </div>
+       {/* Mobile: Show only the last column */}
+      <div className="block md:hidden w-full h-full">
+         {columns.length > 0 && (
+            <div className="flex-shrink-0 w-full border-b md:border-b-0 md:border-r border-border last:border-r-0">
+                <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
+                    {columns[columns.length - 1].map((item) => {
+                         const isSelectedNode = isNode(item) && selectedPath[columns.length-1] === item.name;
+                         const isSelectedDoc = !isNode(item) && selectedDocument?.id === item.id;
+                        return (
+                          <li key={isNode(item) ? item.path : item.id} className="rounded-md text-sm hover:bg-muted/50">
+                            <button
+                                onClick={() => isNode(item) ? handleSelectPath(item.path) : handleSelectDocument(item)}
+                                className={cn(
+                                    "w-full text-left flex items-center justify-between p-2",
+                                     (isSelectedNode || isSelectedDoc) ? "bg-primary/10 text-primary font-semibold" : ""
+                                )}
+                            >
+                                <div className="flex items-center gap-2 truncate">
+                                    {isNode(item) ? <Folder className="h-5 w-5 flex-shrink-0" /> : <FileText className="h-5 w-5 flex-shrink-0" />}
+                                    <span className="truncate">{item.name || (item as DocumentType).filename}</span>
+                                </div>
+                                {isNode(item) && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}
+                            </button>
+                        </li>
+                        )
+                    })}
+                </ul>
+            </div>
+         )}
+      </div>
     </div>
   );
   
@@ -427,7 +443,7 @@ function SmartMailboxComponent() {
   return (
     <div>
       <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
-        {searchTerm ? <><Search className="h-5 w-5" /> Search Results</> : <><Folder /> Your Smart Mailbox</> }
+        {searchTerm ? <><Search className="h-5 w-5" /> Search Results for "{searchTerm}"</> : <><Folder /> Your Smart Mailbox</> }
       </h2>
       
       {documents.length > 0 ? (
@@ -457,10 +473,13 @@ function SmartMailboxComponent() {
                   )}
                 </CardContent>
             </Card>
-
-            <Separator className="my-8" />
-
-            <RecentUploads documents={recentUploads} onSelect={handleSelectDocument} selectedId={selectedDocument?.id} />
+            
+            {!searchTerm && (
+                <>
+                    <Separator className="my-8" />
+                    <RecentUploads documents={recentUploads} onSelect={handleSelectDocument} selectedId={selectedDocument?.id} />
+                </>
+            )}
         </>
       ) : (
         <Card className="min-h-[600px] flex flex-col items-center justify-center text-center p-12">
@@ -501,3 +520,5 @@ export function SmartMailbox() {
     </React.Suspense>
   )
 }
+
+  
