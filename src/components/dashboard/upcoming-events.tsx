@@ -11,6 +11,8 @@ import { format, isSameDay, parseISO, isFuture, isPast, startOfToday } from "dat
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+
 
 type CalendarEvent = {
   id: string;
@@ -27,7 +29,7 @@ function EventListItem({ event }: { event: CalendarEvent }) {
                 <p className="font-semibold text-sm">{event.title}</p>
                 <p className="text-xs text-muted-foreground">{format(event.startDate, "PPP p")}</p>
                 <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1 text-xs">
-                    <a href={`/dashboard/documents?doc=${event.documentId}`} target="_blank" rel="noopener noreferrer">View Document</a>
+                    <Link href={`/dashboard/documents?doc=${event.documentId}`}>View Document</Link>
                 </Button>
             </div>
             <Badge variant="outline" className="flex-shrink-0">{format(event.startDate, "MMM d")}</Badge>
@@ -139,5 +141,3 @@ export function UpcomingEvents() {
     </Card>
   )
 }
-
-  

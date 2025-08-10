@@ -12,6 +12,7 @@ import { format, isSameDay, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events";
+import Link from "next/link";
 
 
 type CalendarEvent = {
@@ -160,7 +161,7 @@ export default function CalendarPage() {
 
                                     <p className="text-xs text-muted-foreground">{event.description}</p>
                                     <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1">
-                                        <a href={`/dashboard/documents?doc=${event.documentId}`} target="_blank" rel="noopener noreferrer">View Document</a>
+                                        <Link href={`/dashboard/documents?doc=${event.documentId}`}>View Document</Link>
                                     </Button>
                                 </li>
                             ))}
@@ -179,5 +180,3 @@ export default function CalendarPage() {
     </div>
   )
 }
-
-  
