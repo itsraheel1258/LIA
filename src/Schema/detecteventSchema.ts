@@ -9,6 +9,7 @@ export const DetectEventInputSchema = z.object({
       )
     ),
     textContent: z.optional(z.string().describe("The text content of the document.")),
+    summary: z.optional(z.string().describe("A summary of the document's content.")),
   });
 
   export const DetectEventOutputSchema = z.object({

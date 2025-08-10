@@ -29,22 +29,13 @@ export async function analyzeDocumentAction({ dataUris, fileType }: Omit<Analyze
 
     // Step 1: Handle images or extract text from PDF
     if (fileType === 'image') {
-       const [analysis, event] = await Promise.all([
-           generateSmartFilename({ photoDataUri: finalDataUri }),
-           detectEvent({ photoDataUri: finalDataUri })
-       ]);
-       analysisResult = analysis;
-       eventResult = event;
+       analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
+       eventResult = await detectEvent({ photoDataUri: finalDataUri, summary: analysisResult.summary });
 
     } else { // PDF
       textContent = await extractText({ dataUri: finalDataUri });
-      
-      const [analysis, event] = await Promise.all([
-          summarizeText({ textContent: textContent! }),
-          detectEvent({ textContent: textContent! })
-      ]);
-      analysisResult = analysis;
-      eventResult = event;
+      analysisResult = await summarizeText({ textContent: textContent! });
+      eventResult = await detectEvent({ textContent: textContent!, summary: analysisResult.summary });
     }
     
     // Filter out any invalid events before returning

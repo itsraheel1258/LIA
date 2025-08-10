@@ -9,23 +9,23 @@ export const eventDetectionPrompt = `You are an intelligent assistant specialize
 - Local or school events (e.g., Parent-Teacher Meetings, Gig Nights)
 
 📌 For each event found, extract the following details:
-- **title** (max 5 words): Short and descriptive name of the event.
+- **title**: A short, descriptive name for the event. First, identify the main subject/entity of the document (e.g., "Chase Bank", "BMW", "Dr. Smith"). Then, combine the subject with the event type. For example: "BMW - Vehicle Reg. Expires", "Chase - Credit Card Payment Due". The title MUST be a maximum of 5 words.
 - **startDate**: The start or due date of the event (**required**).
-- **description**: A short summary of the event's purpose. If it's a bill, include the amount due.
+- **description**: A short summary of the event's purpose. Use the provided document summary for this field. If it's a bill, include the amount due.
 
 📅 Example Output:
 \`\`\`json
 {
   "events": [
     {
-      "title": "Wimbledon Final",
+      "title": "BMW - Vehicle Reg. Expires",
       "startDate": "2025-07-14T15:00:00",
-      "description": "Men's singles championship match at Wimbledon."
+      "description": "Annual vehicle registration renewal for the BMW."
     },
     {
-      "title": "Car Insurance Due",
+      "title": "Geico - Insurance Due",
       "startDate": "2025-08-18T00:00:00",
-      "description": "Annual car insurance premium due. Amount: $450."
+      "description": "Car insurance premium due. Amount: $450."
     }
   ]
 }
@@ -48,6 +48,9 @@ export const eventDetectionPrompt = `You are an intelligent assistant specialize
 
 📝 Document Text:
 {{textContent}}
+
+📄 Document Summary:
+{{summary}}
 
 ---
 
