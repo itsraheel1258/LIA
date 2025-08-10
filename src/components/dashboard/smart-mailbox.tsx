@@ -27,7 +27,7 @@ import { deleteDocumentAction } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentPreview } from "./document-preview";
 import { Separator } from "../ui/separator";
-import { RecentUploads } from "./recent-uploads";
+import { UpcomingEvents } from "./upcoming-events";
 
 
 interface TreeNode {
@@ -124,16 +124,10 @@ function SmartMailboxComponent() {
   }, [documents, searchTerm]);
 
 
-  const { folderTree, recentUploads } = useMemo(() => {
+  const folderTree = useMemo(() => {
     const root: TreeNode = { name: "Root", path: "", children: {}, documents: [] };
 
     const docsToProcess = filteredDocuments;
-
-    const sortedDocs = [...docsToProcess].sort((a,b) => {
-      const dateA = a.createdAt instanceof Date ? a.createdAt : a.createdAt.toDate();
-      const dateB = b.createdAt instanceof Date ? b.createdAt : b.createdAt.toDate();
-      return dateB.getTime() - dateA.getTime();
-    });
 
     docsToProcess.forEach(doc => {
       const path = doc.folderPath || "Uncategorized";
@@ -155,7 +149,7 @@ function SmartMailboxComponent() {
       currentNode.documents.push(doc);
     });
     
-    return { folderTree: root, recentUploads: sortedDocs.slice(0, 10) };
+    return root;
   }, [filteredDocuments]);
 
   const handleSelectPath = (path: string) => {
@@ -405,38 +399,39 @@ function SmartMailboxComponent() {
       
       {documents.length > 0 ? (
         <>
-            <Card className="min-h-[600px] bg-card text-card-foreground flex flex-col">
-                <Breadcrumbs />
-                <CardContent className="p-0 h-full overflow-hidden flex-grow">
-                  {filteredDocuments.length === 0 && searchTerm ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center p-12">
-                        <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <h3 className="mt-2 text-lg font-medium font-headline">No results for "{searchTerm}"</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Try searching for something else.
-                        </p>
-                    </div>
-                  ) : (
-                    <div className="md:flex md:flex-row h-full w-full">
-                        {isMobileView ? (
-                            selectedDocument ? documentPreviewView : fileBrowserView
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:col-span-2">
+                     <Card className="min-h-[600px] bg-card text-card-foreground flex flex-col">
+                        <Breadcrumbs />
+                        <CardContent className="p-0 h-full overflow-hidden flex-grow">
+                        {filteredDocuments.length === 0 && searchTerm ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center p-12">
+                                <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                                <h3 className="mt-2 text-lg font-medium font-headline">No results for "{searchTerm}"</h3>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Try searching for something else.
+                                </p>
+                            </div>
                         ) : (
-                            <>
-                                {fileBrowserView}
-                                {documentPreviewView}
-                            </>
+                            <div className="md:flex md:flex-row h-full w-full">
+                                {isMobileView ? (
+                                    selectedDocument ? documentPreviewView : fileBrowserView
+                                ) : (
+                                    <>
+                                        {fileBrowserView}
+                                        {documentPreviewView}
+                                    </>
+                                )}
+                            </div>
                         )}
-                    </div>
-                  )}
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+                </div>
+                 <div className="lg:col-span-1 space-y-8 sticky top-20">
+                    <UpcomingEvents />
+                </div>
+            </div>
             
-            {!searchTerm && (
-                <>
-                    <Separator className="my-8" />
-                    <RecentUploads documents={recentUploads} onSelect={handleSelectDocument} selectedId={selectedDocument?.id} />
-                </>
-            )}
         </>
       ) : (
         <Card className="min-h-[600px] flex flex-col items-center justify-center text-center p-12">
@@ -477,3 +472,5 @@ export function SmartMailbox() {
     </React.Suspense>
   )
 }
+
+  

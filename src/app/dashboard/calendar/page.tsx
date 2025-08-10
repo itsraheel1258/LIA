@@ -5,15 +5,13 @@ import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarIcon, FileText, Loader2, AlertTriangle, Inbox, Clock, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar as CalendarIcon, Loader2, AlertTriangle, Inbox } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isSameDay, parseISO, isFuture, isPast, startOfToday } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
+import { format, isSameDay, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
+import { UpcomingEvents } from "@/components/dashboard/upcoming-events";
 
 
 type CalendarEvent = {
@@ -22,21 +20,6 @@ type CalendarEvent = {
   startDate: Date;
   description?: string;
   documentId: string;
-}
-
-function EventListItem({ event }: { event: CalendarEvent }) {
-    return (
-        <li className="flex items-start justify-between gap-4 py-3">
-            <div>
-                <p className="font-semibold text-sm">{event.title}</p>
-                <p className="text-xs text-muted-foreground">{format(event.startDate, "PPP p")}</p>
-                <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1 text-xs">
-                    <a href={`/dashboard/documents?doc=${event.documentId}`} target="_blank" rel="noopener noreferrer">View Document</a>
-                </Button>
-            </div>
-            <Badge variant="outline" className="flex-shrink-0">{format(event.startDate, "MMM d")}</Badge>
-        </li>
-    )
 }
 
 export default function CalendarPage() {
@@ -96,19 +79,6 @@ export default function CalendarPage() {
     return events.filter(event => isSameDay(event.startDate, selectedDate));
   }, [events, selectedDate]);
 
-  const { upcomingEvents, recentPastEvents } = useMemo(() => {
-    const today = startOfToday();
-    const upcoming = events
-        .filter(event => isFuture(event.startDate) || isSameDay(event.startDate, today))
-        .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-    const past = events
-        .filter(event => isPast(event.startDate) && !isSameDay(event.startDate, today))
-        .sort((a,b) => b.startDate.getTime() - a.startDate.getTime())
-        .slice(0, 5); // Get the 5 most recent past events
-    return { upcomingEvents: upcoming, recentPastEvents: past };
-  }, [events]);
-
-
   if (!isFirebaseEnabled) {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
@@ -166,50 +136,7 @@ export default function CalendarPage() {
                         />
                     </CardContent>
                 </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline text-xl">Upcoming & Recent Events</CardTitle>
-                        <CardDescription>A quick look at your time-sensitive documents.</CardDescription>
-                    </CardHeader>
-                     <CardContent className="space-y-6">
-                        <div>
-                            <h4 className="flex items-center gap-2 text-sm font-semibold mb-2 text-primary">
-                                <Clock className="h-4 w-4" />
-                                Upcoming Events
-                            </h4>
-                             {loading ? (
-                                <div className="space-y-2">
-                                    <div className="h-12 w-full rounded-md bg-muted animate-pulse" />
-                                    <div className="h-12 w-full rounded-md bg-muted animate-pulse" />
-                                </div>
-                            ) : upcomingEvents.length > 0 ? (
-                                <ul className="divide-y">
-                                    {upcomingEvents.map(event => <EventListItem key={event.id} event={event} />)}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">No upcoming events.</p>
-                            )}
-                        </div>
-
-                        <Separator />
-                        
-                        <div>
-                             <h4 className="flex items-center gap-2 text-sm font-semibold mb-2 text-muted-foreground">
-                                <CheckCircle className="h-4 w-4" />
-                                Recent Past Events
-                            </h4>
-                            {loading ? (
-                                <div className="h-12 w-full rounded-md bg-muted animate-pulse" />
-                            ) : recentPastEvents.length > 0 ? (
-                                <ul className="divide-y">
-                                    {recentPastEvents.map(event => <EventListItem key={event.id} event={event} />)}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">No recent events.</p>
-                            )}
-                        </div>
-                     </CardContent>
-                 </Card>
+                 <UpcomingEvents />
             </div>
 
             <Card className="lg:col-span-1 sticky top-20">
@@ -230,6 +157,7 @@ export default function CalendarPage() {
                             {selectedDayEvents.map(event => (
                                 <li key={event.id} className="p-3 rounded-md border bg-muted/20">
                                     <p className="font-semibold text-sm">{event.title}</p>
+
                                     <p className="text-xs text-muted-foreground">{event.description}</p>
                                     <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1">
                                         <a href={`/dashboard/documents?doc=${event.documentId}`} target="_blank" rel="noopener noreferrer">View Document</a>
@@ -251,3 +179,5 @@ export default function CalendarPage() {
     </div>
   )
 }
+
+  
