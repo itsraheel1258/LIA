@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download, Loader2, Clock, ArrowLeft } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download, Loader2, Clock, ArrowLeft, Search } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
@@ -93,6 +93,8 @@ function SmartMailboxComponent() {
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
 
+  const searchTerm = searchParams.get('search');
+
   useEffect(() => {
     const checkMobile = () => setIsMobileView(window.innerWidth < 768);
     checkMobile();
@@ -127,9 +129,8 @@ function SmartMailboxComponent() {
       setDocuments(docs);
       setLoading(false);
 
-      // Check for docId from URL after documents have loaded
       const docIdFromUrl = searchParams.get('doc');
-      if (docIdFromUrl) {
+      if (docIdFromUrl && !searchTerm) {
         const foundDoc = docs.find(d => d.id === docIdFromUrl);
         if (foundDoc) {
           setSelectedDocument(foundDoc);
@@ -147,18 +148,36 @@ function SmartMailboxComponent() {
     });
 
     return () => unsubscribe();
-  }, [user, isFirebaseEnabled, db, searchParams]);
+  }, [user, isFirebaseEnabled, db, searchParams, searchTerm]);
   
+  const filteredDocuments = useMemo(() => {
+    if (!searchTerm) return documents;
+    
+    const lowercasedTerm = searchTerm.toLowerCase();
+    return documents.filter(doc => {
+      const summary = doc.metadata?.summary || '';
+      return (
+        doc.filename.toLowerCase().includes(lowercasedTerm) ||
+        doc.folderPath.toLowerCase().includes(lowercasedTerm) ||
+        summary.toLowerCase().includes(lowercasedTerm) ||
+        doc.tags.some(tag => tag.toLowerCase().includes(lowercasedTerm))
+      );
+    });
+  }, [documents, searchTerm]);
+
+
   const { folderTree, recentUploads } = useMemo(() => {
     const root: TreeNode = { name: "Root", path: "", children: {}, documents: [] };
 
-    const sortedDocs = [...documents].sort((a,b) => {
+    const docsToProcess = filteredDocuments;
+
+    const sortedDocs = [...docsToProcess].sort((a,b) => {
       const dateA = a.createdAt instanceof Date ? a.createdAt : a.createdAt.toDate();
       const dateB = b.createdAt instanceof Date ? b.createdAt : b.createdAt.toDate();
       return dateB.getTime() - dateA.getTime();
     });
 
-    documents.forEach(doc => {
+    docsToProcess.forEach(doc => {
       const path = doc.folderPath || "Uncategorized";
       const pathParts = path.split('/').map(p => p.trim());
       let currentNode = root;
@@ -179,7 +198,7 @@ function SmartMailboxComponent() {
     });
     
     return { folderTree: root, recentUploads: sortedDocs.slice(0, 10) };
-  }, [documents]);
+  }, [filteredDocuments]);
 
   const handleSelectPath = (path: string) => {
     setSelectedPath(path ? path.split('/') : []);
@@ -406,13 +425,24 @@ function SmartMailboxComponent() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
+      <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
+        {searchTerm ? <><Search className="h-5 w-5" /> Search Results</> : <><Folder /> Your Smart Mailbox</> }
+      </h2>
       
       {documents.length > 0 ? (
         <>
             <Card className="min-h-[600px] bg-card text-card-foreground flex flex-col">
                 <Breadcrumbs />
                 <CardContent className="p-0 h-full overflow-hidden flex-grow">
+                  {filteredDocuments.length === 0 && searchTerm ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-12">
+                        <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-2 text-lg font-medium font-headline">No results for "{searchTerm}"</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Try searching for something else.
+                        </p>
+                    </div>
+                  ) : (
                     <div className="md:flex md:flex-row h-full w-full">
                         {isMobileView ? (
                             selectedDocument ? documentPreviewView : fileBrowserView
@@ -423,6 +453,7 @@ function SmartMailboxComponent() {
                             </>
                         )}
                     </div>
+                  )}
                 </CardContent>
             </Card>
 
@@ -469,5 +500,3 @@ export function SmartMailbox() {
     </React.Suspense>
   )
 }
-
-    
