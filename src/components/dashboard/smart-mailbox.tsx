@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Document as DocumentType } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download, Loader2, Clock, ArrowLeft, Search } from "lucide-react";
+import { Folder, Inbox, AlertTriangle, FileText, ChevronRight, Trash2, Home, Download, Loader2, ArrowLeft, Search } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
@@ -26,10 +26,8 @@ import {
 import { deleteDocumentAction } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentPreview } from "./document-preview";
-import Image from "next/image";
-import { formatDistanceToNow, parseISO } from "date-fns";
 import { Separator } from "../ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RecentUploads } from "./recent-uploads";
 
 
 interface TreeNode {
@@ -39,47 +37,6 @@ interface TreeNode {
   documents: DocumentType[];
 }
 
-function RecentUploads({ documents, onSelect, selectedId }: { documents: DocumentType[], onSelect: (doc: DocumentType) => void, selectedId?: string | null }) {
-    if (documents.length === 0) return null;
-
-    return (
-        <div className="mt-8">
-            <h3 className="mb-4 text-xl font-bold font-headline flex items-center gap-2"><Clock className="h-5 w-5" /> Recent Uploads</h3>
-            <Card>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Path</TableHead>
-                            <TableHead className="text-right">Created</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {documents.map(doc => (
-                            <TableRow 
-                                key={doc.id} 
-                                onClick={() => onSelect(doc)}
-                                className={cn(
-                                    "cursor-pointer",
-                                    selectedId === doc.id && "bg-muted/50"
-                                )}
-                            >
-                                <TableCell className="font-medium flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-muted-foreground" />
-                                    {doc.filename}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">{doc.folderPath}</TableCell>
-                                <TableCell className="text-right text-muted-foreground text-xs">
-                                    {doc.createdAt ? formatDistanceToNow(doc.createdAt instanceof Date ? doc.createdAt : doc.createdAt.toDate(), { addSuffix: true }) : ''}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Card>
-        </div>
-    )
-}
 
 function SmartMailboxComponent() {
   const { user, isFirebaseEnabled, db } = useAuth();
@@ -520,5 +477,3 @@ export function SmartMailbox() {
     </React.Suspense>
   )
 }
-
-  
