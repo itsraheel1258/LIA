@@ -21,7 +21,7 @@ import {
   Calendar as CalendarIcon,
   Tag,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isSameDay } from "date-fns";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 
@@ -61,7 +61,7 @@ export function DocumentPreview({
     const startDate = parseISO(start);
     if (end) {
         const endDate = parseISO(end);
-        if (format(startDate, 'PPP') === format(endDate, 'PPP')) {
+        if (isSameDay(startDate, endDate)) {
             return `${format(startDate, 'PPP')} @ ${format(startDate, 'p')} - ${format(endDate, 'p')}`;
         }
         return `${format(startDate, 'PPP p')} - ${format(endDate, 'PPP p')}`;

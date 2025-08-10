@@ -84,6 +84,9 @@ export default function CalendarPage() {
 
   const formatEventTime = (start: Date, end: Date | undefined) => {
     if (end) {
+        if (isSameDay(start, end)) {
+            return `${format(start, 'p')} - ${format(end, 'p')}`;
+        }
         return `${format(start, 'p')} - ${format(end, 'p')}`;
     }
     return format(start, 'p');

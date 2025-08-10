@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/carousel";
 import { Label } from "../ui/label";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isSameDay } from "date-fns";
 import { Separator } from "../ui/separator";
 import type { CalendarEvent } from "@/lib/types";
 
@@ -275,7 +275,7 @@ export function DocumentScanner() {
     const startDate = parseISO(start);
     if (end) {
         const endDate = parseISO(end);
-        if (format(startDate, 'PPP') === format(endDate, 'PPP')) {
+        if (isSameDay(startDate, endDate)) {
             return `${format(startDate, 'PPP')} @ ${format(startDate, 'p')} - ${format(endDate, 'p')}`;
         }
         return `${format(startDate, 'PPP p')} - ${format(endDate, 'PPP p')}`;
