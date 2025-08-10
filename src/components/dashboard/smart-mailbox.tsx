@@ -156,9 +156,10 @@ function SmartMailboxComponent() {
     const lowercasedTerm = searchTerm.toLowerCase();
     return documents.filter(doc => {
       const summary = doc.metadata?.summary || '';
+      const folderPath = doc.folderPath || '';
       return (
         doc.filename.toLowerCase().includes(lowercasedTerm) ||
-        doc.folderPath.toLowerCase().includes(lowercasedTerm) ||
+        folderPath.toLowerCase().includes(lowercasedTerm) ||
         summary.toLowerCase().includes(lowercasedTerm) ||
         doc.tags.some(tag => tag.toLowerCase().includes(lowercasedTerm))
       );
@@ -363,7 +364,7 @@ function SmartMailboxComponent() {
   );
 
   const fileBrowserView = (
-    <div className="flex flex-row overflow-x-auto h-full">
+    <div className="flex flex-col md:flex-row overflow-x-auto h-full">
         {columns.map((columnItems, colIndex) => (
             <div key={colIndex} className="flex-shrink-0 w-full md:w-64 border-b md:border-b-0 md:border-r border-border last:border-r-0">
                 <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
