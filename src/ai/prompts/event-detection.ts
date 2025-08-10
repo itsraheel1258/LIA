@@ -1,3 +1,4 @@
+
 export const eventDetectionPrompt = `You are an intelligent assistant specialized in extracting **calendar-related events** from documents (either image or text). Your job is to analyze the content and extract **all events** you can find.
 
 📝 Your task is to identify and extract **multiple relevant events** such as:
@@ -33,7 +34,7 @@ export const eventDetectionPrompt = `You are an intelligent assistant specialize
 
 ⚠️ Important:
 - Use **ISO 8601 format** for all dates and times.
-- If a date is missing the year, assume the **current year**.
+- If a date is missing the year, assume the **current year**. If the date has already passed in the current year, assume the **next calendar year**.
 - The event 'title' MUST be a maximum of 5 words.
 - Do **not hallucinate** any information. Only return what's clearly stated.
 - If no valid event is found, return:
