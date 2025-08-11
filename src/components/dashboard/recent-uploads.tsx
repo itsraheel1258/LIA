@@ -70,34 +70,34 @@ export function RecentUploads({ documents, onSelect, selectedId, className, show
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {documents.map(doc => {
-                           const rowContent = (
+                        {documents.map(doc => (
                              <TableRow 
                                 key={doc.id} 
                                 onClick={() => handleRowClick(doc)}
                                 className={cn(
-                                    onSelect ? "cursor-pointer" : "cursor-default",
+                                    onSelect ? "cursor-pointer" : "",
+                                    !onSelect && "hover:bg-muted/50",
                                     selectedId === doc.id && "bg-muted/50"
                                 )}
                             >
-                                <TableCell className="font-medium flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-muted-foreground" />
-                                    {doc.filename}
+                                <TableCell className="font-medium">
+                                   <Link href={`/dashboard/documents?doc=${doc.id}`} className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-muted-foreground" />
+                                        {doc.filename}
+                                    </Link>
                                 </TableCell>
-                                <TableCell className="text-muted-foreground">{doc.folderPath}</TableCell>
-                                <TableCell className="text-right text-muted-foreground text-xs">
-                                    {doc.createdAt ? formatDistanceToNow(doc.createdAt instanceof Date ? doc.createdAt : doc.createdAt.toDate(), { addSuffix: true }) : ''}
+                                <TableCell>
+                                     <Link href={`/dashboard/documents?doc=${doc.id}`} className="text-muted-foreground">
+                                        {doc.folderPath}
+                                     </Link>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Link href={`/dashboard/documents?doc=${doc.id}`} className="text-muted-foreground text-xs">
+                                        {doc.createdAt ? formatDistanceToNow(doc.createdAt instanceof Date ? doc.createdAt : doc.createdAt.toDate(), { addSuffix: true }) : ''}
+                                    </Link>
                                 </TableCell>
                             </TableRow>
-                           );
-
-                           // If not selectable, wrap in a link to the document preview page
-                           return onSelect ? rowContent : (
-                                <Link href={`/dashboard/documents?doc=${doc.id}`} key={doc.id} passHref legacyBehavior>
-                                    {rowContent}
-                                </Link>
-                           );
-                        })}
+                        ))}
                     </TableBody>
                 </Table>
             </Card>
