@@ -53,7 +53,6 @@ type ScannerState =
 type AiResult = GenerateSmartFilenameOutput & {
   finalDataUri: string;
   events: CalendarEvent[];
-  previewUrl?: string;
 };
 
 export function DocumentScanner() {
@@ -154,7 +153,7 @@ export function DocumentScanner() {
     try {
       const result = await analyzeDocumentAction({
         dataUris: imagePreviews,
-        fileType,
+        fileType: fileType,
         detectEvents: true,
       });
 
@@ -208,7 +207,6 @@ export function DocumentScanner() {
     const result = await saveDocumentAction({
       userId: user.uid,
       imageDataUri: aiResult.finalDataUri,
-      previewUrl: aiResult.previewUrl,
       filename,
       tags,
       folderPath,
@@ -290,18 +288,6 @@ export function DocumentScanner() {
       scannerState === "reviewing" || scannerState === "saving";
     let src = imagePreviews;
 
-    if (isReviewingOrSaving && aiResult?.previewUrl) {
-        return (
-             <Image
-                src={aiResult.previewUrl}
-                alt={`Preview of ${aiResult.filename}`}
-                width={400}
-                height={500}
-                className="rounded-lg w-full object-contain max-h-[400px] bg-muted"
-              />
-        )
-    }
-
     // On review screen, we just show the first image, which is what will be saved.
     if (isReviewingOrSaving && aiResult?.finalDataUri) {
       src = [aiResult.finalDataUri];
@@ -309,12 +295,12 @@ export function DocumentScanner() {
 
     if (src.length === 0) return null;
 
-    if ((fileType === "pdf" || fileType === "word") && !isReviewingOrSaving) {
+    if (fileType === "pdf" || fileType === "word") {
       return (
         <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
           <FileText className="h-24 w-24 text-primary" />
           <p className="mt-4 text-sm text-muted-foreground">
-            {fileType === 'pdf' ? 'PDF' : 'Word'} Document Ready for Analysis
+            {isReviewingOrSaving ? "Analysis complete." : (fileType === 'pdf' ? 'PDF Document Ready' : 'Word Document Ready')}
           </p>
         </div>
       );

@@ -11,7 +11,6 @@ import { detectEvent } from "@/ai/flows/detect-event";
 import type { DetectEventOutput } from "@/Schema/detecteventSchema";
 import type { CalendarEvent } from "@/lib/types";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
-import { generatePreview } from "@/ai/flows/generate-preview";
 
 interface AnalyzeDocumentParams {
   dataUris: string[];
@@ -22,7 +21,6 @@ interface AnalyzeDocumentParams {
 type AnalysisResult = GenerateSmartFilenameOutput & {
   finalDataUri: string;
   events: CalendarEvent[];
-  previewUrl?: string;
 };
 
 export async function analyzeDocumentAction(
@@ -33,19 +31,15 @@ export async function analyzeDocumentAction(
     let analysisResult: GenerateSmartFilenameOutput;
     let finalDataUri: string;
     let textContent: string | undefined;
-    let previewUrl: string | undefined;
 
     // The first image is always used for analysis and saving.
     finalDataUri = dataUris[0];
 
     if (fileType === 'image') {
       analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
-      previewUrl = finalDataUri; // For images, the preview is the image itself.
     } else { // PDF or Word
       textContent = await extractText({ dataUri: finalDataUri });
       analysisResult = await summarizeText({ textContent });
-      // Generate an AI preview for non-image files
-      previewUrl = await generatePreview({ summary: analysisResult.summary });
     }
     
     let validEvents: CalendarEvent[] = [];
@@ -67,7 +61,6 @@ export async function analyzeDocumentAction(
         ...analysisResult,
         finalDataUri,
         events: validEvents,
-        previewUrl,
       },
     };
 
@@ -81,7 +74,6 @@ export async function analyzeDocumentAction(
 interface SaveDocumentInput {
   userId: string;
   imageDataUri: string;
-  previewUrl?: string;
   filename: string;
   folderPath: string;
   tags: string[];
@@ -127,7 +119,6 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
             tags: input.tags,
             storagePath,
             downloadUrl,
-            previewUrl: input.previewUrl || downloadUrl,
             metadata: {
                 ...input.metadata,
                 summary: input.summary,
