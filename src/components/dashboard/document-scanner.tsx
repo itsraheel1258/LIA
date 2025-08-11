@@ -621,37 +621,45 @@ export function DocumentScanner() {
                         <p className="mt-1 text-xs">{event.description}</p>
                       )}
                       
-                                             <div className="flex gap-2 mt-2">
-                         <Button 
-                           variant="outline" 
-                           size="sm" 
-                           onClick={() => addToLiaCalendar(event)}
-                           disabled={addingToCalendar === event.title}
-                         >
-                           {addingToCalendar === event.title ? (
-                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                           ) : (
-                             <CalendarPlus className="mr-2 h-4 w-4" />
-                           )}
-                           {addingToCalendar === event.title ? "Adding..." : "Add to Lia Calendar"}
-                         </Button>
-                         <Button asChild variant="outline" size="sm">
-                           <a
-                             href={createGoogleCalendarLink(event)}
-                             target="_blank"
-                             rel="noopener noreferrer"
-                           >
-                             Add to Google Calendar
-                           </a>
-                         </Button>
-                       </div>
-                                             <p className="text-xs text-muted-foreground mt-2">
-                         This event will be saved to your Lia calendar automatically. You can view all events in the Calendar tab.
-                       </p>
+                  
+                      <div className="flex gap-2 mt-2">
+                        <Button asChild variant="outline" size="sm">
+                          <a
+                            href={createGoogleCalendarLink(event)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Add to Google Calendar
+                          </a>
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Add to Google Calendar for external calendar
+                        integration.
+                      </p>
                       
                       {index < aiResult.events.length - 1 && <Separator className="my-4" />}
                     </div>
                   ))}
+                     <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={() => addToLiaCalendar(aiResult.events[0])}
+                  >
+                    {addingToCalendar === aiResult.events[0].title ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CalendarPlus className="mr-2 h-4 w-4 bg-primary text-primary-foreground" />
+                    )}
+                    {addingToCalendar === aiResult.events[0].title
+                      ? "Adding..."
+                      : "Add to Lia Calendar"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    This event will be saved to your Lia calendar automatically.
+                    You can view all events in the Calendar tab.
+                  </p>
                 </CardContent>
               </Card>
             )}

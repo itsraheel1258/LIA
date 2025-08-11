@@ -230,20 +230,7 @@ export function DocumentPreview({
                     <p className="mt-1 text-xs">{event.description}</p>
                   )}
                   <div className="flex gap-2 mt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addToLiaCalendar(event)}
-                      disabled={addingToCalendar === event.title}
-                    >
-                      {addingToCalendar === event.title ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CalendarPlus className="mr-2 h-4 w-4" />
-                      )}
-                      {addingToCalendar === event.title ? "Adding..." : "Add to Lia Calendar"}
-                    </Button>
-                    <Button
+                  <Button
                       asChild
                       variant="outline"
                       size="sm"

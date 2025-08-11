@@ -13,15 +13,15 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
 } from "../ui/alert-dialog";
 import { deleteDocumentAction } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
@@ -64,12 +64,12 @@ function SmartMailboxComponent() {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     const q = query(
-        collection(db, "documents"), 
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc")
+      collection(db, "documents"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -100,16 +100,16 @@ function SmartMailboxComponent() {
       }
 
     }, (error) => {
-        console.error("Error fetching documents: ", error);
-        setLoading(false);
+      console.error("Error fetching documents: ", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [user, isFirebaseEnabled, db, searchParams, searchTerm]);
-  
+
   const filteredDocuments = useMemo(() => {
     if (!searchTerm) return documents;
-    
+
     const lowercasedTerm = searchTerm.toLowerCase();
     return documents.filter(doc => {
       const summary = doc.metadata?.summary || '';
@@ -145,10 +145,10 @@ function SmartMailboxComponent() {
         }
         currentNode = currentNode.children[part];
       });
-      
+
       currentNode.documents.push(doc);
     });
-    
+
     return root;
   }, [filteredDocuments]);
 
@@ -156,7 +156,7 @@ function SmartMailboxComponent() {
     setSelectedPath(path ? path.split('/') : []);
     setSelectedDocument(null);
   };
-  
+
   const handleSelectDocument = (doc: DocumentType) => {
     setSelectedDocument(prev => (prev && prev.id === doc.id ? null : doc));
   };
@@ -169,7 +169,7 @@ function SmartMailboxComponent() {
       setSelectedPath(selectedPath.slice(0, index + 1));
     }
   }
-  
+
   const getNodeFromPath = useCallback((path: string[], tree: TreeNode): TreeNode | null => {
     if (path.length === 0) return tree;
     let currentNode = tree;
@@ -185,50 +185,50 @@ function SmartMailboxComponent() {
 
   const handleDeleteConfirm = async () => {
     if (!docToDelete || !user) return;
-    
-    if(selectedDocument && selectedDocument.id === docToDelete.id) {
-        setSelectedDocument(null);
+
+    if (selectedDocument && selectedDocument.id === docToDelete.id) {
+      setSelectedDocument(null);
     }
 
     const result = await deleteDocumentAction({
-        documentId: docToDelete.id,
-        storagePath: docToDelete.storagePath,
-        userId: user.uid
+      documentId: docToDelete.id,
+      storagePath: docToDelete.storagePath,
+      userId: user.uid
     });
 
     if (result.success) {
-        toast({ title: "Document deleted successfully." });
+      toast({ title: "Document deleted successfully." });
     } else {
-        toast({ variant: "destructive", title: "Deletion Failed", description: result.error });
+      toast({ variant: "destructive", title: "Deletion Failed", description: result.error });
     }
     setDocToDelete(null);
   };
-  
+
   const handleDownload = async (doc: DocumentType) => {
     setDownloadingDocId(doc.id);
     try {
-        const response = await fetch(doc.downloadUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch file: ${response.statusText}`);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = doc.filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+      const response = await fetch(doc.downloadUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-        console.error("Download failed", error);
-        toast({
-            variant: "destructive",
-            title: "Download Failed",
-            description: "Could not download the file. Please try again.",
-        });
+      console.error("Download failed", error);
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "Could not download the file. Please try again.",
+      });
     } finally {
-        setDownloadingDocId(null);
+      setDownloadingDocId(null);
     }
   }
 
@@ -236,81 +236,81 @@ function SmartMailboxComponent() {
   const columns = useMemo(() => {
     const cols: (TreeNode | DocumentType)[][] = [];
     let currentNode = folderTree;
-    
-    cols.push(Object.values(currentNode.children).sort((a,b) => a.name.localeCompare(b.name)));
+
+    cols.push(Object.values(currentNode.children).sort((a, b) => a.name.localeCompare(b.name)));
 
     for (let i = 0; i < selectedPath.length; i++) {
-        const node = getNodeFromPath(selectedPath.slice(0, i + 1), folderTree);
-        if (node) {
-             const children = Object.values(node.children).sort((a,b) => a.name.localeCompare(b.name));
-             const docs = node.documents.sort((a,b) => {
-                const dateA = a.createdAt instanceof Date ? a.createdAt : a.createdAt.toDate();
-                const dateB = b.createdAt instanceof Date ? b.createdAt : b.createdAt.toDate();
-                return dateB.getTime() - dateA.getTime()
-             });
-             if (children.length > 0 || docs.length > 0) {
-                 cols.push([...children, ...docs]);
-             }
+      const node = getNodeFromPath(selectedPath.slice(0, i + 1), folderTree);
+      if (node) {
+        const children = Object.values(node.children).sort((a, b) => a.name.localeCompare(b.name));
+        const docs = node.documents.sort((a, b) => {
+          const dateA = a.createdAt instanceof Date ? a.createdAt : a.createdAt.toDate();
+          const dateB = b.createdAt instanceof Date ? b.createdAt : b.createdAt.toDate();
+          return dateB.getTime() - dateA.getTime()
+        });
+        if (children.length > 0 || docs.length > 0) {
+          cols.push([...children, ...docs]);
         }
+      }
     }
     return cols;
   }, [selectedPath, folderTree, getNodeFromPath]);
 
   if (!isFirebaseEnabled) {
     return (
-        <div>
-            <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
-             <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Firebase Not Configured</AlertTitle>
-                <AlertDescription>
-                    Cannot load documents. Please configure your Firebase API keys to view your mailbox.
-                </AlertDescription>
-            </Alert>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Firebase Not Configured</AlertTitle>
+          <AlertDescription>
+            Cannot load documents. Please configure your Firebase API keys to view your mailbox.
+          </AlertDescription>
+        </Alert>
+      </div>
     )
   }
 
   if (loading) {
-      return (
-        <div>
-            <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
-             <Card className="h-[600px]">
-                <CardContent className="p-0 h-full">
-                    <div className="flex h-full">
-                        <div className="w-full md:w-1/3 border-r p-2 space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>
-                        <div className="hidden md:block w-1/3 border-r p-2"><Skeleton className="h-8 w-full" /></div>
-                        <div className="hidden md:block w-1/3 p-2"></div>
-                    </div>
-                </CardContent>
-             </Card>
-        </div>
-      )
+    return (
+      <div>
+        <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2"><Folder /> Your Smart Mailbox</h2>
+        <Card className="h-[600px]">
+          <CardContent className="p-0 h-full">
+            <div className="flex h-full">
+              <div className="w-full md:w-1/3 border-r p-2 space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>
+              <div className="hidden md:block w-1/3 border-r p-2"><Skeleton className="h-8 w-full" /></div>
+              <div className="hidden md:block w-1/3 p-2"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
-  
+
   const isNode = (item: any): item is TreeNode => 'children' in item;
 
   const Breadcrumbs = () => (
     <div className="flex items-center justify-between p-2 border-b">
-        <nav className="flex items-center text-sm text-muted-foreground">
-            <button onClick={() => handleBreadcrumbClick(-1)} className="flex items-center gap-1 hover:text-primary">
-                <Home className="h-4 w-4" />
+      <nav className="flex items-center text-sm text-muted-foreground">
+        <button onClick={() => handleBreadcrumbClick(-1)} className="flex items-center gap-1 hover:text-primary">
+          <Home className="h-4 w-4" />
+        </button>
+        {selectedPath.map((part, index) => (
+          <div key={index} className="flex items-center">
+            <ChevronRight className="h-4 w-4 mx-1" />
+            <button onClick={() => handleBreadcrumbClick(index)} className="hover:text-primary truncate max-w-[150px]">
+              {part}
             </button>
-            {selectedPath.map((part, index) => (
-                <div key={index} className="flex items-center">
-                    <ChevronRight className="h-4 w-4 mx-1" />
-                    <button onClick={() => handleBreadcrumbClick(index)} className="hover:text-primary truncate max-w-[150px]">
-                        {part}
-                    </button>
-                </div>
-            ))}
-        </nav>
-        {isMobileView && selectedDocument && (
-          <Button variant="ghost" size="sm" onClick={() => setSelectedDocument(null)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        )}
+          </div>
+        ))}
+      </nav>
+      {isMobileView && selectedDocument && (
+        <Button variant="ghost" size="sm" onClick={() => setSelectedDocument(null)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+      )}
     </div>
   );
 
@@ -319,74 +319,74 @@ function SmartMailboxComponent() {
       {/* Desktop: Show all columns */}
       <div className="hidden md:flex flex-row h-full">
         {columns.map((columnItems, colIndex) => (
-            <div key={colIndex} className="flex-shrink-0 w-64 border-r border-border last:border-r-0">
-                <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
-                    {columnItems.map((item) => {
-                        const isSelectedNode = isNode(item) && selectedPath[colIndex] === item.name;
-                        const isSelectedDoc = !isNode(item) && selectedDocument?.id === item.id;
-                        return (
-                          <li key={isNode(item) ? item.path : item.id} className="rounded-md text-sm hover:bg-muted/50">
-                            <button
-                                onClick={() => isNode(item) ? handleSelectPath(item.path) : handleSelectDocument(item)}
-                                className={cn(
-                                    "w-full text-left flex items-center justify-between p-2",
-                                    (isSelectedNode || isSelectedDoc) ? "bg-primary/10 text-primary font-semibold" : ""
-                                )}
-                            >
-                                <div className="flex items-center gap-2 truncate">
-                                    {isNode(item) ? <Folder className="h-5 w-5 flex-shrink-0" /> : <FileText className="h-5 w-5 flex-shrink-0" />}
-                                    <span className="truncate">{item.name || (item as DocumentType).filename}</span>
-                                </div>
-                                {isNode(item) && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}
-                            </button>
-                        </li>
-                        )
-                    })}
-                </ul>
-            </div>
+          <div key={colIndex} className="flex-shrink-0 w-64 border-r border-border last:border-r-0">
+            <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
+              {columnItems.map((item) => {
+                const isSelectedNode = isNode(item) && selectedPath[colIndex] === item.name;
+                const isSelectedDoc = !isNode(item) && selectedDocument?.id === item.id;
+                return (
+                  <li key={isNode(item) ? item.path : item.id} className="rounded-md text-sm hover:bg-muted/50">
+                    <button
+                      onClick={() => isNode(item) ? handleSelectPath(item.path) : handleSelectDocument(item)}
+                      className={cn(
+                        "w-full text-left flex items-center justify-between p-2",
+                        (isSelectedNode || isSelectedDoc) ? "bg-primary/10 text-primary font-semibold" : ""
+                      )}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        {isNode(item) ? <Folder className="h-5 w-5 flex-shrink-0" /> : <FileText className="h-5 w-5 flex-shrink-0" />}
+                        <span className="truncate">{item.name || (item as DocumentType).filename}</span>
+                      </div>
+                      {isNode(item) && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         ))}
       </div>
-       {/* Mobile: Show only the last column */}
+      {/* Mobile: Show only the last column */}
       <div className="block md:hidden w-full h-full">
-         {columns.length > 0 && (
-            <div className="flex-shrink-0 w-full border-b md:border-b-0 md:border-r border-border last:border-r-0">
-                <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
-                    {columns[columns.length - 1].map((item) => {
-                         const isSelectedNode = isNode(item) && selectedPath[columns.length-1] === item.name;
-                         const isSelectedDoc = !isNode(item) && selectedDocument?.id === item.id;
-                        return (
-                          <li key={isNode(item) ? item.path : item.id} className="rounded-md text-sm hover:bg-muted/50">
-                            <button
-                                onClick={() => isNode(item) ? handleSelectPath(item.path) : handleSelectDocument(item)}
-                                className={cn(
-                                    "w-full text-left flex items-center justify-between p-2",
-                                     (isSelectedNode || isSelectedDoc) ? "bg-primary/10 text-primary font-semibold" : ""
-                                )}
-                            >
-                                <div className="flex items-center gap-2 truncate">
-                                    {isNode(item) ? <Folder className="h-5 w-5 flex-shrink-0" /> : <FileText className="h-5 w-5 flex-shrink-0" />}
-                                    <span className="truncate">{item.name || (item as DocumentType).filename}</span>
-                                </div>
-                                {isNode(item) && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}
-                            </button>
-                        </li>
-                        )
-                    })}
-                </ul>
-            </div>
-         )}
+        {columns.length > 0 && (
+          <div className="flex-shrink-0 w-full border-b md:border-b-0 md:border-r border-border last:border-r-0">
+            <ul className="p-1 space-y-0.5 h-full overflow-y-auto">
+              {columns[columns.length - 1].map((item) => {
+                const isSelectedNode = isNode(item) && selectedPath[columns.length - 1] === item.name;
+                const isSelectedDoc = !isNode(item) && selectedDocument?.id === item.id;
+                return (
+                  <li key={isNode(item) ? item.path : item.id} className="rounded-md text-sm hover:bg-muted/50">
+                    <button
+                      onClick={() => isNode(item) ? handleSelectPath(item.path) : handleSelectDocument(item)}
+                      className={cn(
+                        "w-full text-left flex items-center justify-between p-2",
+                        (isSelectedNode || isSelectedDoc) ? "bg-primary/10 text-primary font-semibold" : ""
+                      )}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        {isNode(item) ? <Folder className="h-5 w-5 flex-shrink-0" /> : <FileText className="h-5 w-5 flex-shrink-0" />}
+                        <span className="truncate">{item.name || (item as DocumentType).filename}</span>
+                      </div>
+                      {isNode(item) && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
-  
+
   const documentPreviewView = selectedDocument && (
-     <div className="flex-grow md:border-l overflow-y-auto">
-        <DocumentPreview 
-            document={selectedDocument} 
-            onDownload={handleDownload}
-            onDelete={setDocToDelete}
-            isDownloading={downloadingDocId === selectedDocument.id}
-        />
+    <div className="flex-grow md:border-l overflow-y-auto">
+      <DocumentPreview
+        document={selectedDocument}
+        onDownload={handleDownload}
+        onDelete={setDocToDelete}
+        isDownloading={downloadingDocId === selectedDocument.id}
+      />
     </div>
   );
 
@@ -394,70 +394,70 @@ function SmartMailboxComponent() {
   return (
     <div>
       <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
-        {searchTerm ? <><Search className="h-5 w-5" /> Search Results for "{searchTerm}"</> : <><Folder /> Your Smart Mailbox</> }
+        {searchTerm ? <><Search className="h-5 w-5" /> Search Results for "{searchTerm}"</> : <><Folder /> Your Smart Mailbox</>}
       </h2>
-      
+
       {documents.length > 0 ? (
         <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2">
-                     <Card className="min-h-[600px] bg-card text-card-foreground flex flex-col">
-                        <Breadcrumbs />
-                        <CardContent className="p-0 h-full overflow-hidden flex-grow">
-                        {filteredDocuments.length === 0 && searchTerm ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center p-12">
-                                <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                                <h3 className="mt-2 text-lg font-medium font-headline">No results for "{searchTerm}"</h3>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Try searching for something else.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="md:flex md:flex-row h-full w-full">
-                                {isMobileView ? (
-                                    selectedDocument ? documentPreviewView : fileBrowserView
-                                ) : (
-                                    <>
-                                        {fileBrowserView}
-                                        {documentPreviewView}
-                                    </>
-                                )}
-                            </div>
-                        )}
-                        </CardContent>
-                    </Card>
-                </div>
-                 <div className="lg:col-span-1 space-y-8 sticky top-20">
-                    <UpcomingEvents />
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            <div className="lg:col-span-2">
+              <Card className="min-h-[600px] bg-card text-card-foreground flex flex-col">
+                <Breadcrumbs />
+                <CardContent className="p-0 h-full overflow-hidden flex-grow">
+                  {filteredDocuments.length === 0 && searchTerm ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-12">
+                      <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                      <h3 className="mt-2 text-lg font-medium font-headline">No results for "{searchTerm}"</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Try searching for something else.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="md:flex md:flex-row h-full w-full">
+                      {isMobileView ? (
+                        selectedDocument ? documentPreviewView : fileBrowserView
+                      ) : (
+                        <>
+                          {fileBrowserView}
+                          {documentPreviewView}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-            
+            <div className="lg:col-span-1 space-y-8 sticky top-20">
+              <UpcomingEvents />
+            </div>
+          </div>
+
         </>
       ) : (
         <Card className="min-h-[600px] flex flex-col items-center justify-center text-center p-12">
-            <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-2 text-lg font-medium font-headline">Your mailbox is empty</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-                Scan your first document to see it appear here.
-            </p>
-            <Button asChild className="mt-4">
-                <Link href="/dashboard">Add New Document</Link>
-            </Button>
+          <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h3 className="mt-2 text-lg font-medium font-headline">Your mailbox is empty</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Scan your first document to see it appear here.
+          </p>
+          <Button asChild className="mt-4">
+            <Link href="/dashboard">Add New Document</Link>
+          </Button>
         </Card>
       )}
 
       <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
         <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will permanently delete the document "{docToDelete?.filename}" and remove it from storage. This action cannot be undone.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the document "{docToDelete?.filename}" and remove it from storage. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
@@ -473,4 +473,3 @@ export function SmartMailbox() {
   )
 }
 
-  
