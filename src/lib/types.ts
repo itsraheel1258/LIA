@@ -22,6 +22,7 @@ export interface Document {
   folderPath: string;
   storagePath: string;
   downloadUrl:string;
+  previewUrl?: string; // The URL for the AI-generated preview image
   metadata: {
     sender?: string;
     date?: string;

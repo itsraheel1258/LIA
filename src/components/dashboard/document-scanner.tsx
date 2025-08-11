@@ -53,6 +53,7 @@ type ScannerState =
 type AiResult = GenerateSmartFilenameOutput & {
   finalDataUri: string;
   events: CalendarEvent[];
+  previewUrl?: string;
 };
 
 export function DocumentScanner() {
@@ -207,6 +208,7 @@ export function DocumentScanner() {
     const result = await saveDocumentAction({
       userId: user.uid,
       imageDataUri: aiResult.finalDataUri,
+      previewUrl: aiResult.previewUrl,
       filename,
       tags,
       folderPath,
@@ -288,13 +290,16 @@ export function DocumentScanner() {
       scannerState === "reviewing" || scannerState === "saving";
     let src = imagePreviews;
 
-    if (isReviewingOrSaving && (fileType === "pdf" || fileType === "word") && aiResult?.finalDataUri) {
-      return (
-        <div className="flex flex-col items-center justify-center bg-muted p-8 rounded-lg">
-          <FileText className="h-24 w-24 text-primary" />
-          <p className="mt-4 text-sm text-muted-foreground">{fileType === 'pdf' ? 'PDF Document' : 'Word Document'}</p>
-        </div>
-      );
+    if (isReviewingOrSaving && aiResult?.previewUrl) {
+        return (
+             <Image
+                src={aiResult.previewUrl}
+                alt={`Preview of ${aiResult.filename}`}
+                width={400}
+                height={500}
+                className="rounded-lg w-full object-contain max-h-[400px] bg-muted"
+              />
+        )
     }
 
     // On review screen, we just show the first image, which is what will be saved.
@@ -389,7 +394,7 @@ export function DocumentScanner() {
         return `${imagePreviews.length} page(s) loaded. Add more pages or let Lia work her magic! Lia will automatically detect any events or tasks.`;
       }
       case "processing":
-        return "Lia is analyzing the content and any potential events in your document.";
+        return "Lia is analyzing the content and generating a preview for your document.";
       case "reviewing":
         return "Review the details below or edit them before saving.";
       case "saving":

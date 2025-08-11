@@ -6,3 +6,4 @@ import '@/ai/flows/suggest-tags.ts';
 import '@/ai/flows/extract-text.ts';
 import '@/ai/flows/summarize-text.ts';
 import '@/ai/flows/detect-event.ts';
+import '@/ai/flows/generate-preview.ts';

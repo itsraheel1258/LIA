@@ -39,6 +39,7 @@ export function DocumentPreview({
   isDownloading,
 }: DocumentPreviewProps) {
   const isPdf = document.filename.toLowerCase().endsWith(".pdf");
+  const previewSrc = document.previewUrl || document.downloadUrl;
 
   const createGoogleCalendarLink = (event: CalendarEvent) => {
     if (!event.startDate || !event.title) return "";
@@ -73,20 +74,13 @@ export function DocumentPreview({
     <div className="p-4 sm:p-6 h-full flex flex-col">
       <div className="flex-shrink-0">
         <div className="relative aspect-[4/5] sm:aspect-video w-full bg-muted rounded-lg overflow-hidden mb-4">
-          {isPdf ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <FileText className="h-16 w-16 text-primary" />
-              <p className="mt-2 text-sm text-muted-foreground">PDF Document</p>
-            </div>
-          ) : (
-            <Image
-              src={document.downloadUrl}
+          <Image
+              src={previewSrc}
               alt={`Preview of ${document.filename}`}
               layout="fill"
               objectFit="contain"
-              className="bg-white"
+              className={document.previewUrl ? "" : "bg-white"}
             />
-          )}
         </div>
 
         <div className="flex items-start justify-between gap-4">

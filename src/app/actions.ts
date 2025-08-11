@@ -11,41 +11,44 @@ import { detectEvent } from "@/ai/flows/detect-event";
 import type { DetectEventOutput } from "@/Schema/detecteventSchema";
 import type { CalendarEvent } from "@/lib/types";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
+import { generatePreview } from "@/ai/flows/generate-preview";
 
 interface AnalyzeDocumentParams {
   dataUris: string[];
   fileType: "image" | "pdf" | "word";
 }
 
-// Overload signatures
-export async function analyzeDocumentAction(
-  params: AnalyzeDocumentParams & { detectEvents: true }
-): Promise<{ success: true; data: GenerateSmartFilenameOutput & { finalDataUri: string, events: CalendarEvent[] } } | { success: false, error: string }>;
+// Define a comprehensive result type that includes all possible fields
+type AnalysisResult = GenerateSmartFilenameOutput & {
+  finalDataUri: string;
+  events: CalendarEvent[];
+  previewUrl?: string;
+};
 
-export async function analyzeDocumentAction(
-  params: AnalyzeDocumentParams & { detectEvents: false }
-): Promise<{ success: true; data: GenerateSmartFilenameOutput & { finalDataUri: string } } | { success: false, error: string }>;
-
-// Combined implementation
 export async function analyzeDocumentAction(
   params: AnalyzeDocumentParams & { detectEvents: boolean }
-): Promise<any> {
+): Promise<{ success: true; data: AnalysisResult } | { success: false; error: string }> {
   try {
     const { dataUris, fileType, detectEvents } = params;
     let analysisResult: GenerateSmartFilenameOutput;
     let finalDataUri: string;
     let textContent: string | undefined;
+    let previewUrl: string | undefined;
 
     // The first image is always used for analysis and saving.
     finalDataUri = dataUris[0];
 
     if (fileType === 'image') {
       analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
+      previewUrl = finalDataUri; // For images, the preview is the image itself.
     } else { // PDF or Word
       textContent = await extractText({ dataUri: finalDataUri });
       analysisResult = await summarizeText({ textContent });
+      // Generate an AI preview for non-image files
+      previewUrl = await generatePreview({ summary: analysisResult.summary });
     }
-
+    
+    let validEvents: CalendarEvent[] = [];
     if (detectEvents) {
       let eventResult: DetectEventOutput = { events: [] };
       if (fileType === 'image') {
@@ -54,16 +57,8 @@ export async function analyzeDocumentAction(
         eventResult = await detectEvent({ textContent: textContent!, summary: analysisResult.summary });
       }
       
-      const validEvents = eventResult.events.filter(e => e.title && e.startDate && e.title.toLowerCase() !== 'no event found' && e.startDate.toLowerCase() !== 'no start date found');
-      
-      return {
-        success: true,
-        data: {
-          ...analysisResult,
-          finalDataUri,
-          events: validEvents.map(e => ({ ...e, description: e.description || analysisResult.summary })),
-        },
-      };
+      const filteredEvents = eventResult.events.filter(e => e.title && e.startDate && e.title.toLowerCase() !== 'no event found' && e.startDate.toLowerCase() !== 'no start date found');
+      validEvents = filteredEvents.map(e => ({ ...e, description: e.description || analysisResult.summary }));
     }
 
     return {
@@ -71,6 +66,8 @@ export async function analyzeDocumentAction(
       data: {
         ...analysisResult,
         finalDataUri,
+        events: validEvents,
+        previewUrl,
       },
     };
 
@@ -80,9 +77,11 @@ export async function analyzeDocumentAction(
   }
 }
 
+
 interface SaveDocumentInput {
   userId: string;
   imageDataUri: string;
+  previewUrl?: string;
   filename: string;
   folderPath: string;
   tags: string[];
@@ -128,6 +127,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
             tags: input.tags,
             storagePath,
             downloadUrl,
+            previewUrl: input.previewUrl || downloadUrl,
             metadata: {
                 ...input.metadata,
                 summary: input.summary,
