@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 
-
 type CalendarEvent = {
   id: string;
   title: string;
@@ -28,9 +27,14 @@ function EventListItem({ event }: { event: CalendarEvent }) {
             <div>
                 <p className="font-semibold text-sm">{event.title}</p>
                 <p className="text-xs text-muted-foreground">{format(event.startDate, "PPP p")}</p>
-                <Button variant="link" size="sm" asChild className="p-0 h-auto mt-1 text-xs">
-                    <Link href={`/dashboard/documents?doc=${event.documentId}`}>View Document</Link>
-                </Button>
+                {event.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{event.description}</p>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                    <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs">
+                        <Link href={`/dashboard/documents?doc=${event.documentId}`}>View Document</Link>
+                    </Button>
+                </div>
             </div>
             <Badge variant="outline" className="flex-shrink-0">{format(event.startDate, "MMM d")}</Badge>
         </li>
@@ -49,20 +53,29 @@ export function UpcomingEvents() {
     }
     
     setLoading(true);
-    const q = query(
+    // Query documents where the event.events array is not empty.
+    const documentsQuery = query(
         collection(db, "documents"), 
         where("userId", "==", user.uid),
-        where("event.events", "!=", []),
+        where("event.found", "==", true),
         orderBy("createdAt", "desc")
     );
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const allEvents: CalendarEvent[] = [];
+    // Query standalone calendar events
+    const calendarEventsQuery = query(
+        collection(db, "calendarEvents"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+    );
+
+
+    const unsubscribeDocuments = onSnapshot(documentsQuery, (querySnapshot) => {
+      const documentEvents: CalendarEvent[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Document;
         if (data.event && data.event.events) {
             data.event.events.forEach(event => {
-                allEvents.push({
+                documentEvents.push({
                     id: `${doc.id}-${event.title}`,
                     title: event.title,
                     startDate: parseISO(event.startDate),
@@ -72,14 +85,37 @@ export function UpcomingEvents() {
             });
         }
       });
-      setEvents(allEvents);
-      setLoading(false);
+
+      // Fetch standalone calendar events
+      const unsubscribeCalendar = onSnapshot(calendarEventsQuery, (calendarSnapshot) => {
+        const calendarEvents: CalendarEvent[] = [];
+        calendarSnapshot.forEach((doc) => {
+          const data = doc.data();
+          calendarEvents.push({
+            id: `calendar-${doc.id}`,
+            title: data.title,
+            startDate: parseISO(data.startDate),
+            description: data.description || undefined,
+            documentId: data.location || "Manual Event", // Use location or indicate it's manual
+          });
+        });
+
+        // Combine both types of events
+        const allEvents = [...documentEvents, ...calendarEvents];
+        setEvents(allEvents);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching calendar events: ", error);
+        setLoading(false);
+      });
+
+      return () => unsubscribeCalendar();
     }, (error) => {
-        console.error("Error fetching events: ", error);
+        console.error("Error fetching document events: ", error);
         setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeDocuments();
   }, [user, isFirebaseEnabled, db]);
 
   const { upcomingEvents, recentPastEvents } = useMemo(() => {
@@ -113,7 +149,16 @@ export function UpcomingEvents() {
                     </div>
                 ) : upcomingEvents.length > 0 ? (
                     <ul className="divide-y">
-                        {upcomingEvents.map(event => <EventListItem key={event.id} event={event} />)}
+                        {upcomingEvents.map(event => <EventListItem key={event.id} event={event} 
+
+                        />)}
+                        {upcomingEvents.length > 5 && (
+                            <li className="text-sm text-muted-foreground text-center py-4">
+                                <Link href="/dashboard/calendar" className="text-primary hover:underline">
+                                    View All Events
+                                </Link>
+                            </li>
+                        )}
                     </ul>
                 ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">No upcoming events.</p>

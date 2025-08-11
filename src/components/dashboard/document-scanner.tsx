@@ -26,7 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { analyzeDocumentAction, saveDocumentAction } from "@/app/actions";
+import { analyzeDocumentAction, saveDocumentAction, createCalendarEventAction } from "@/app/actions";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -62,6 +62,7 @@ export function DocumentScanner() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [fileType, setFileType] = useState<"image" | "pdf" | "word" | null>(null);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
+  const [addingToCalendar, setAddingToCalendar] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -165,7 +166,7 @@ export function DocumentScanner() {
           variant: "destructive",
           title: "Analysis Failed",
           description:
-            (result && result.error) ||
+            (result && !result.success && result.error) ||
             "Lia could not understand this document. Please check your Gemini API key.",
         });
         setScannerState("capturing");
@@ -212,13 +213,17 @@ export function DocumentScanner() {
       folderPath,
       summary,
       metadata: aiResult.metadata,
-      events: aiResult.events, // Pass the events to the save action
+      events: aiResult.events, 
     });
 
     if (result.success) {
+      const eventMessage = aiResult.events && aiResult.events.length > 0 
+        ? ` and ${aiResult.events.length} event${aiResult.events.length > 1 ? 's' : ''} added to your calendar`
+        : "";
+      
       toast({
         title: "Document Saved!",
-        description: "Your document is now available in your Smart Mailbox.",
+        description: `Your document is now available in your Smart Mailbox${eventMessage}.`,
       });
       handleReset();
       router.push(`/dashboard/documents?doc=${result.documentId}`);
@@ -237,7 +242,7 @@ export function DocumentScanner() {
 
     const formatDateForGoogle = (dateStr: string) => {
       try {
-        const date = new Date(dateStr);
+        const date = new Date(event.startDate);
         if (isNaN(date.getTime())) {
           console.warn(`Invalid date string: ${dateStr}`);
           return "";
@@ -269,6 +274,50 @@ export function DocumentScanner() {
     url.searchParams.append("details", details);
 
     return url.toString();
+  };
+
+  const addToLiaCalendar = async (event: CalendarEvent) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please sign in to add events to your calendar."
+      });
+      return;
+    }
+
+    setAddingToCalendar(event.title);
+    
+    try {
+      const result = await createCalendarEventAction({
+        userId: user.uid,
+        title: event.title,
+        startDate: event.startDate,
+        description: event.description || undefined,
+      });
+
+      if (result.success) {
+        toast({
+          title: "Event Added to Lia Calendar!",
+          description: "Your event has been added to your Lia calendar and will appear in upcoming events."
+        });
+        console.log("Event added to Lia calendar", result);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Add Event",
+          description: result.error || "Could not add event to calendar."
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred while adding the event."
+      });
+    } finally {
+      setAddingToCalendar(null);
+    }
   };
   
   const formatEventTime = (start: string, end: string | undefined) => {
@@ -572,18 +621,33 @@ export function DocumentScanner() {
                         <p className="mt-1 text-xs">{event.description}</p>
                       )}
                       
-                      <Button asChild variant="outline" size="sm" className="mt-2">
-                            <a
-                              href={createGoogleCalendarLink(event)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Add to Google Calendar
-                            </a>
-                      </Button>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        This event will be saved to your Lia calendar automatically.
-                      </p>
+                                             <div className="flex gap-2 mt-2">
+                         <Button 
+                           variant="outline" 
+                           size="sm" 
+                           onClick={() => addToLiaCalendar(event)}
+                           disabled={addingToCalendar === event.title}
+                         >
+                           {addingToCalendar === event.title ? (
+                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                           ) : (
+                             <CalendarPlus className="mr-2 h-4 w-4" />
+                           )}
+                           {addingToCalendar === event.title ? "Adding..." : "Add to Lia Calendar"}
+                         </Button>
+                         <Button asChild variant="outline" size="sm">
+                           <a
+                             href={createGoogleCalendarLink(event)}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                           >
+                             Add to Google Calendar
+                           </a>
+                         </Button>
+                       </div>
+                                             <p className="text-xs text-muted-foreground mt-2">
+                         This event will be saved to your Lia calendar automatically. You can view all events in the Calendar tab.
+                       </p>
                       
                       {index < aiResult.events.length - 1 && <Separator className="my-4" />}
                     </div>

@@ -12,7 +12,6 @@ export const eventDetectionPrompt = `You are an intelligent assistant specialize
 📌 For each event found, extract the following details:
 - **title**: A short, descriptive name for the event. First, identify the main subject/entity of the document (e.g., "Chase Bank", "BMW", "Dr. Smith"). Then, combine the subject with the event type. For example: "BMW - Vehicle Reg. Expires", "Chase - Credit Card Payment Due". The title MUST be a maximum of 5 words.
 - **startDate**: The start or due date of the event (**required**).
-- **endDate**: The end date or end time of the event, if specified.
 - **description**: A short summary of the event's purpose. Use the provided document summary for this field. If it's a bill, include the amount due.
 
 📅 Example Output:
@@ -22,7 +21,6 @@ export const eventDetectionPrompt = `You are an intelligent assistant specialize
     {
       "title": "BMW - Vehicle Reg. Expires",
       "startDate": "2025-07-14T15:00:00",
-      "endDate": "2025-07-14T16:00:00",
       "description": "Annual vehicle registration renewal for the BMW."
     },
     {

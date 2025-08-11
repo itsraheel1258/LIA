@@ -24,6 +24,10 @@ import {
 import { format, parseISO, isSameDay } from "date-fns";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
+import { createCalendarEventAction } from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useState } from "react";
 
 interface DocumentPreviewProps {
   document: DocumentType;
@@ -38,6 +42,10 @@ export function DocumentPreview({
   onDelete,
   isDownloading,
 }: DocumentPreviewProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [addingToCalendar, setAddingToCalendar] = useState<string | null>(null);
+
   const isPdf = document.filename.toLowerCase().endsWith(".pdf");
   const isWord = document.filename.toLowerCase().endsWith(".doc") || document.filename.toLowerCase().endsWith(".docx");
   const isImage = !isPdf && !isWord;
@@ -70,6 +78,50 @@ export function DocumentPreview({
     }
     return format(startDate, "PPP p");
   }
+
+  const addToLiaCalendar = async (event: CalendarEvent) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please sign in to add events to your calendar."
+      });
+      return;
+    }
+
+    setAddingToCalendar(event.title);
+    
+    try {
+      const result = await createCalendarEventAction({
+        userId: user.uid,
+        title: event.title,
+        startDate: event.startDate,
+        description: event.description || undefined,
+        location: undefined
+      });
+
+      if (result.success) {
+        toast({
+          title: "Event Added to Lia Calendar!",
+          description: "Your event has been added to your Lia calendar and will appear in upcoming events."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Add Event",
+          description: result.error || "Could not add event to calendar."
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred while adding the event."
+      });
+    } finally {
+      setAddingToCalendar(null);
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 h-full flex flex-col">
@@ -177,20 +229,37 @@ export function DocumentPreview({
                   {event.description && (
                     <p className="mt-1 text-xs">{event.description}</p>
                   )}
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                  >
-                    <a
-                      href={createGoogleCalendarLink(event)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addToLiaCalendar(event)}
+                      disabled={addingToCalendar === event.title}
                     >
-                      Add to Google Calendar
-                    </a>
-                  </Button>
+                      {addingToCalendar === event.title ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CalendarPlus className="mr-2 h-4 w-4" />
+                      )}
+                      {addingToCalendar === event.title ? "Adding..." : "Add to Lia Calendar"}
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                    >
+                      <a
+                        href={createGoogleCalendarLink(event)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Add to Google Calendar
+                      </a>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Add to Lia Calendar to see events in your dashboard, or Add to Google Calendar for external calendar integration.
+                  </p>
                   {document.event && document.event.events && index < document.event.events.length - 1 && (
                     <Separator className="my-4" />
                   )}

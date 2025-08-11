@@ -5,10 +5,8 @@ import { generateSmartFilename } from "@/ai/flows/generate-filename";
 import { summarizeText } from "@/ai/flows/summarize-text";
 import { extractText } from "@/ai/flows/extract-text";
 import { revalidatePath } from "next/cache";
-// Import the initialized server-side Admin Firebase services
 import { adminDb, adminStorage } from "@/lib/firebase/server";
 import { detectEvent } from "@/ai/flows/detect-event";
-import type { DetectEventOutput } from "@/Schema/detecteventSchema";
 import type { CalendarEvent } from "@/lib/types";
 import type { GenerateSmartFilenameOutput } from "@/ai/flows/generate-filename";
 
@@ -17,7 +15,6 @@ interface AnalyzeDocumentParams {
   fileType: "image" | "pdf" | "word";
 }
 
-// Define a comprehensive result type that includes all possible fields
 type AnalysisResult = GenerateSmartFilenameOutput & {
   finalDataUri: string;
   events: CalendarEvent[];
@@ -32,27 +29,24 @@ export async function analyzeDocumentAction(
     let finalDataUri: string;
     let textContent: string | undefined;
 
-    // The first image is always used for analysis and saving.
     finalDataUri = dataUris[0];
-
     if (fileType === 'image') {
       analysisResult = await generateSmartFilename({ photoDataUri: finalDataUri });
-    } else { // PDF or Word
+    } else { 
       textContent = await extractText({ dataUri: finalDataUri });
       analysisResult = await summarizeText({ textContent });
     }
     
     let validEvents: CalendarEvent[] = [];
     if (detectEvents) {
-      let eventResult: DetectEventOutput = { events: [] };
+      let eventResult: { events: any[] } = { events: [] };
       if (fileType === 'image') {
         eventResult = await detectEvent({ photoDataUri: finalDataUri, summary: analysisResult.summary });
       } else {
         eventResult = await detectEvent({ textContent: textContent!, summary: analysisResult.summary });
       }
-      
-      const filteredEvents = eventResult.events.filter(e => e.title && e.startDate && e.title.toLowerCase() !== 'no event found' && e.startDate.toLowerCase() !== 'no start date found');
-      validEvents = filteredEvents.map(e => ({ ...e, description: e.description || analysisResult.summary }));
+      const filteredEvents = eventResult.events.filter((e: any) => e.title && e.startDate && e.title.toLowerCase() !== 'no event found' && e.startDate.toLowerCase() !== 'no start date found');
+      validEvents = filteredEvents.map((e: any) => ({ ...e, description: e.description || analysisResult.summary }));
     }
 
     return {
@@ -94,8 +88,6 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
     try {
         const bucket = adminStorage.bucket();
         const storagePath = `documents/${input.userId}/${Date.now()}-${input.filename}`;
-        
-        // Remove the data URI prefix for upload
         const base64Data = input.imageDataUri.split(',')[1];
         const imageBuffer = Buffer.from(base64Data, 'base64');
         const file = bucket.file(storagePath);
@@ -107,8 +99,7 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
                 contentType: contentType,
             },
         });
-        
-        // Make the file public to get a download URL
+
         await file.makePublic();
         const downloadUrl = file.publicUrl();
 
@@ -123,12 +114,11 @@ export async function saveDocumentAction(input: SaveDocumentInput) {
                 ...input.metadata,
                 summary: input.summary,
             },
-            // Save the event data to firestore. If there are events, `found` will be true.
             event: {
               events: input.events,
               found: input.events && input.events.length > 0
             },
-            createdAt: new Date(), // Use server-side timestamp
+            createdAt: new Date(), 
         });
 
         revalidatePath("/dashboard");
@@ -169,11 +159,7 @@ export async function deleteDocumentAction({ documentId, storagePath, userId }: 
         if (doc.data()?.userId !== userId) {
             return { success: false, error: "You do not have permission to delete this document." };
         }
-
-        // Delete the file from Cloud Storage
         await adminStorage.bucket().file(storagePath).delete();
-
-        // Delete the document from Firestore
         await docRef.delete();
 
         revalidatePath("/dashboard");
@@ -181,5 +167,66 @@ export async function deleteDocumentAction({ documentId, storagePath, userId }: 
     } catch (error: any) {
         console.error("Error deleting document:", error);
         return { success: false, error: "Failed to delete document." };
+    }
+}
+
+export async function createCalendarEventAction(input: {
+    userId: string;
+    title: string;
+    startDate: string;
+    endDate?: string;
+    description?: string;
+    location?: string;
+}) {
+    if (!input.userId) {
+        return { success: false, error: "Authentication error: User ID is missing." };
+    }
+
+    try {
+        const eventRef = await adminDb.collection("calendarEvents").add({
+            userId: input.userId,
+            title: input.title,
+            startDate: input.startDate,
+            endDate: input.endDate || null,
+            description: input.description || null,
+            location: input.location || null,
+            createdAt: new Date(),
+            type: "manual" 
+        });
+
+        revalidatePath("/dashboard/calendar");
+        return { success: true, eventId: eventRef.id };
+    } catch (error: any) {
+        console.error("Error creating calendar event:", error);
+        return { success: false, error: error.message || "Failed to create calendar event." };
+    }
+}
+
+export async function deleteCalendarEventAction(input: {
+    userId: string;
+    eventId: string;
+}) {
+    if (!input.userId) {
+        return { success: false, error: "Authentication error: User ID is missing." };
+    }
+
+    try {
+        const eventRef = adminDb.collection("calendarEvents").doc(input.eventId);
+        const eventDoc = await eventRef.get();
+
+        if (!eventDoc.exists) {
+            return { success: false, error: "Event not found." };
+        }
+        
+        if (eventDoc.data()?.userId !== input.userId) {
+            return { success: false, error: "You do not have permission to delete this event." };
+        }
+        await eventRef.delete();
+
+        revalidatePath("/dashboard/calendar");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting calendar event:", error);
+        return { success: false, error: error.message || "Failed to delete calendar event." };
     }
 }
